@@ -33,11 +33,17 @@ public:
 class Subject{
 private: 
     // Teachers
-    Teacher prepod;
+    Teacher _prepod;
     // Classes
-    map<time_t, Class> classes;
-Nikita_lox
-Ilya_lox
+    map<time_t, Class> _classes;
+// Nikita_lox
+// Ilya_lox
+public:
+    explicit Subject(Teacher prepod, map<time_t, Class> classes) : _prepod(prepod), _classes(classes){}
+
+    Teacher prepod(void) const {return _prepod;}
+    map<time_t, Class> classes(void) const {return _classes;}
+
 
 };
 
@@ -49,6 +55,7 @@ private:
     // Students
     vector<Student> students;
     // Leaderboard когда-нибудь когда нам будут платить деньги
+public:
 
 
 };
@@ -65,7 +72,7 @@ private:
     // Arrangement
     // Score
 public:
-
+    
 };
 
 class Teacher{
