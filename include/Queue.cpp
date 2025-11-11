@@ -13,8 +13,7 @@ inline bool is_connection_open(sqlite3* conn) {
 
 
 
-std::pair<QueueError, std::optional<int>>
-push(int student_id){
+QueueResult<int>push(int student_id){
     if (!db.get_conn()){
         return{QueueError::CONNECTION_CLOSED, std::nullopt};
     }
@@ -31,8 +30,7 @@ int getLen() const;  // Длина очереди
 
 
 
-std::pair<QueueError, std::optional<std::vector<Student>>>
-getAllStudents(const Queue& queue){
+QueueResult<std::vector<Student>>getAllStudents(const Queue& queue){
     // hui
     std::vector<Student> students;
 
