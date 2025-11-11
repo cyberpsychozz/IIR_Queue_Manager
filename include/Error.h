@@ -1,13 +1,16 @@
 #pragma once
 #include <optional>
 
-enum class QueueError {
+enum class FuncError {
     OK,
     DB_NOT_OPEN,
     PREPARE_FAILED,
     BIND_FAILED,
     STEP_FAILED,
     NOT_FOUND,
+    NOT_FOUND,
+    INVALID_POSITION,
+    STUDENT_NOT_IN_QUEUE,
     INVALID_POSITION,
     STUDENT_NOT_IN_QUEUE,
     UNKNOWN,
@@ -16,4 +19,4 @@ enum class QueueError {
 
 // Удобный тип результата
 template<typename T>
-using QueueResult = std::pair<QueueError, std::optional<T>>;
+using funcResult = std::pair<FuncError, std::optional<T>>;
