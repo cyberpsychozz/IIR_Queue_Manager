@@ -1,0 +1,14 @@
+#pragma once
+
+enum class QueueError {
+    OK,
+    DB_NOT_OPEN,
+    PREPARE_FAILED,
+    BIND_FAILED,
+    STEP_FAILED,
+    NOT_FOUND,
+    INVALID_POSITION,
+    DUPLICATE_POSITION,
+    STUDENT_NOT_IN_QUEUE,
+    UNKNOWN
+};
