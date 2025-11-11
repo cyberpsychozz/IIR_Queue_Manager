@@ -19,4 +19,4 @@ enum class FuncError {
 
 // Удобный тип результата
 template<typename T>
-using funcResult = std::pair<FuncError, std::optional<T>>;
+using FuncResult = std::pair<FuncError, std::optional<T>>;
