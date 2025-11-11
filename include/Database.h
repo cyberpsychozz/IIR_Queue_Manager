@@ -2,26 +2,35 @@
 #include <sqlite3.h>
 #include <string>
 #include <vector>
+#include <iostream>
 #include "Student.h"
+#include "Queue.h"
 
 class Database {
 private:
-    sqlite3* conn;
-    std::string path;
+    sqlite3* _conn;
+    std::string _path;
 
 public:
-    Database(const std::string& path);
-    ~Database();
-    bool open();
-    void close();
-    void createTables();  // CREATE TABLE students(id INTEGER PRIMARY KEY, ...), queues(id PK, subject_id, student_id, position), etc.
+    Database(const std::string& path) : _path(path){
+        if(!open()){
+            std::cerr << "can't open a database, try again with a correct path";
+        }
+    }
 
-    // Методы для классов: e.g.,
-    void insertStudent(const Student& student);
-    Student getStudentById(int id);
-    std::vector<Student> getAllStudents();
+    ~Database(){
+        close();
+    };
 
-    // Для Queue: custom queries (prepared statements для скорости)
-    int executeIntQuery(const std::string& sql, ...);  // Для скалярных значений
-    // И т.д.
+    sqlite3* get_conn() const {return _conn;}
+    std::string get_path() const {return _path;}
+
+    bool open(){
+        return sqlite3_open(_path.c_str(), &_conn) == SQLITE_OK;
+    }
+
+    bool close(){
+        return sqlite3_close(_conn) == SQLITE_OK;
+    }
+
 };
