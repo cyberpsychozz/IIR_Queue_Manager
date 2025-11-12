@@ -15,19 +15,21 @@ int main() {
         std::cout << (*res.second).getName() << std::endl;
     }
     else {
-        printf("%s\n", res.first);
+        // printf("%s\n", res.first);
+        // Напечатать ошибку
     }
 
-    // FuncResult<std::vector<Seminar>> res2 = subj.getClasses(db, 24940);
+    FuncResult<std::vector<Seminar>> res2 = subj.getClasses(db, 24940);
 
-    // if (res2.second) {
-    //     for (auto v : (*res2.second)) {
-    //         std::cout << v.id << v.date << v.comment <<std::endl;
-    //     }
-    // }
-    // else {
-    //     printf("%s\n", res2.first);
-    // }
+    if (res2.second) {
+        for (auto v : (*res2.second)) {
+            std::cout << v.id << "   " << v.date << "   " << v.comment <<std::endl;
+        }
+    }
+    else {
+        // printf("%s\n", res2.first);
+        // Напечатать ошибку
+    }
 
 
     

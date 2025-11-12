@@ -61,36 +61,29 @@ FuncResult<std::vector<Seminar>> Subject::getClasses(Database& db, int group) co
         return {FuncError::CONNECTION_CLOSED, std::nullopt};
     }
 
-    const char* sql = R"(
-        SELECT Id, Date, Comment
-        FROM ?
-        WHERE Groups = ?
-    )";
+    std::string table_name = "Sems_" + std::to_string(Subject::id);
+    std::string sql = "SELECT Id, Date, Comment FROM " + table_name + " WHERE Groups = ?";
 
     sqlite3_stmt* stmt = nullptr;
-    auto rc = sqlite3_prepare_v2(db.get_conn(), sql, -1, &stmt, nullptr);
-
+    auto rc = sqlite3_prepare_v2(db.get_conn(), sql.c_str(), -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
-        std::string err = "SQL prepare error: ";
-        err += sqlite3_errmsg(db.get_conn());
         sqlite3_finalize(stmt);
         return {FuncError::PREPARE_FAILED, std::nullopt};
     }
 
-    sqlite3_bind_text(stmt, 1, "Sems_" + (Subject::id + '0'), -1, SQLITE_STATIC);
     sqlite3_bind_int(stmt, 1, group);
 
     std::vector<Seminar> sems;
     Seminar sem;
     int id = 1;
-
     while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
         sem.id = id;
-        sem.date = (time_t)sqlite3_column_text(stmt, 1);
 
-        std::optional<const char*> comment = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
-        sem.comment = *comment;
-
+        const char* date = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+        sem.date = date;
+        
+        const char* comment = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+        sem.comment = comment ? comment : "";
         sems.push_back(sem);
         ++id;
     }
