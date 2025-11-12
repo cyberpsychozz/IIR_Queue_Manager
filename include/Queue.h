@@ -12,8 +12,8 @@ private:
     Database& db;
 
 public:
-    Queue(int subject_id, Database& database)
-        : _Subject_id(subject_id), db(database) {}
+    Queue(int subject_id, Database& database);
+        // : _Subject_id(subject_id), db(database) {}
 
     // === Методы с ошибками ===
     FuncResult<int> push(int student_id);
