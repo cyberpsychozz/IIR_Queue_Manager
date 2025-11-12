@@ -4,6 +4,8 @@
 #include "Database.h"
 #include "Subject.h"
 
+class Subject;
+
 class Teacher {
 private:
     int id;

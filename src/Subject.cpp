@@ -17,7 +17,6 @@ FuncResult<Teacher> Subject::getTeacher(Database& db) const {
     sqlite3_stmt* stmt = nullptr;
     auto rc = sqlite3_prepare_v2(db.get_conn(), sql, -1, &stmt, nullptr);
 
-    sqlite3_finalize(stmt);
     sqlite3_bind_int(stmt, 1, id);
 
     Teacher prepod;
@@ -34,7 +33,12 @@ FuncResult<Teacher> Subject::getTeacher(Database& db) const {
         prepod.setId(teacherId);
         prepod.setName(std::string(reinterpret_cast<const char*>(name)));
         prepod.setLogin(std::string(reinterpret_cast<const char*>(login)));
-        prepod.setUsernameTg(std::string(reinterpret_cast<const char*>(tg_id)));
+        if (tg_id != nullptr) {
+            prepod.setUsernameTg(std::string(reinterpret_cast<const char*>(tg_id)));
+        }
+        // else {
+        //     Запросить TG_ID
+        // }
     } 
     // Не вернулся результат    
     else if (rc == SQLITE_DONE) {
