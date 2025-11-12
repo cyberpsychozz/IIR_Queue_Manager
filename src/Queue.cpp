@@ -1,4 +1,3 @@
-#pragma once
 #include "Student.h"
 #include "Database.h"
 #include <optional>
@@ -78,7 +77,8 @@ FuncResult<bool>Queue::pop(){
     return{FuncError::OK, rc == SQLITE_DONE};
 }
 
-FuncResult<bool>Queue::swap(int pos1, int pos2){// Обмен позициями в очереди (служебный или по согласию)
+// Обмен позициями в очереди (служебный или по согласию)
+FuncResult<bool>Queue::swap(int pos1, int pos2){
     if (!db.get_conn()){
         return{FuncError::DB_NOT_OPEN, std::nullopt};
     }
@@ -111,9 +111,11 @@ FuncResult<bool>Queue::swap(int pos1, int pos2){// Обмен позициями
     
     return{FuncError::OK, rc == SQLITE_DONE && sqlite3_changes(db.get_conn()) == 2};
 }
+
+// Пропуск одного человека вперёд
 FuncResult<bool>Queue::skip(){
     return swap(1, 2);
-} // Пропуск одного человека вперёд
+} 
 int give_up(int student_id); // Удаление из очереди по желанию Студента
 // std_optional 
 int getPosition(int student_id) const; // Своя позиция в очереди

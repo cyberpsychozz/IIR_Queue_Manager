@@ -1,8 +1,7 @@
-// Queue.h
 #pragma once
 #include "Student.h"
 #include "Database.h"
-#include "QueueError.h"
+#include "Error.h"
 #include <vector>
 
 class Queue {
