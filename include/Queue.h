@@ -4,6 +4,8 @@
 #include "Error.h"
 #include <vector>
 
+class Database;
+
 class Queue {
 private:
     int _Subject_id;

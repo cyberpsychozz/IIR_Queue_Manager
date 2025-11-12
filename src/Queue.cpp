@@ -24,7 +24,7 @@ FuncResult<int>Queue::push(int student_id){
 
     int new_pos = LenRes.second.value() + 1;
 
-    const char* sql = "INSERT INTO Queues (Student_Id, Subject_Id, Position) VALUES (?, ?, ?);" 
+    const char* sql = "INSERT INTO Queues (Student_Id, Subject_Id, Position) VALUES (?, ?, ?);";
 
     sqlite3_stmt* stmt = nullptr;
     if (sqlite3_prepare_v2(db.get_conn(), sql, -1, &stmt, nullptr) != SQLITE_OK) {
