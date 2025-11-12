@@ -4,3 +4,11 @@
  ./configure
  make
 ```
+
+# Конфигурация makefile:
+```
+    cd build
+    rm -rf *  # Очистить старую конфигурацию
+    cmake ..
+    make
+``` 

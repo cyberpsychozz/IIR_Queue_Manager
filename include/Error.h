@@ -8,15 +8,31 @@ enum class FuncError {
     BIND_FAILED,
     STEP_FAILED,
     NOT_FOUND,
-    NOT_FOUND,
-    INVALID_POSITION,
-    STUDENT_NOT_IN_QUEUE,
     INVALID_POSITION,
     STUDENT_NOT_IN_QUEUE,
     UNKNOWN,
     CONNECTION_CLOSED
 };
 
-// Удобный тип результата
 template<typename T>
 using FuncResult = std::pair<FuncError, std::optional<T>>;
+
+template<typename T>
+bool operator==(const FuncResult<T>& result, FuncError error) {
+    return result.first == error;
+}
+
+template<typename T>
+bool operator!=(const FuncResult<T>& result, FuncError error) {
+    return result.first != error;
+}
+
+template<typename T>
+bool operator==(FuncError error, const FuncResult<T>& result) {
+    return result.first == error;
+}
+
+template<typename T>
+bool operator!=(FuncError error, const FuncResult<T>& result) {
+    return result.first != error;
+}
