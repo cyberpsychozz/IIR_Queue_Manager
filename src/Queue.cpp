@@ -208,7 +208,7 @@ FuncResult<int> Queue::getLen() const {
 
 
 
-FuncResult<std::vector<Student>>Queue::getAllStudents() const{
+FuncResult<std::vector<Student>>Queue::getQueue() const{
     // hui
     std::vector<Student> students;
 

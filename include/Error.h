@@ -1,7 +1,7 @@
 #pragma once
 #include <optional>
 
-enum class FuncError {
+enum class FuncError { // TODO Надо в нормальный вид этот файл привести
     OK,
     DB_NOT_OPEN,
     PREPARE_FAILED,

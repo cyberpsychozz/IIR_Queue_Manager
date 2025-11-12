@@ -12,29 +12,12 @@ private:
     std::string _path;
 
 public:
-    Database(const std::string& path) : _path(path){
-        if(!open()){
-            std::cerr << "can't open a database, try again with a correct path";
-        }
-    }
+    Database(const std::string& path);
+    ~Database();
 
-    ~Database(){
-        close();
-    };
+    sqlite3* get_conn() const;
+    std::string get_path() const;
 
-    sqlite3* get_conn() const {return _conn;}
-    std::string get_path() const {return _path;}
-
-    bool open(){
-        return sqlite3_open(_path.c_str(), &_conn) == SQLITE_OK;
-    }
-
-    bool close(){
-        return sqlite3_close(_conn) == SQLITE_OK;
-    }
-
-    // get_teacher_subjects;
-
-    // get_student subjects;
-
+    bool open();
+    bool close();
 };

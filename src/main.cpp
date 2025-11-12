@@ -11,7 +11,7 @@ int main() {
     Database db("../data/test.db");
     Subject subj(1, "ООП", 1);
     Queue queue(1, db);
-
+ 
     FuncResult<Teacher> res = subj.getTeacher(db);
     if (res.second) {
         std::cout << (*res.second).getName() << std::endl;
@@ -33,19 +33,19 @@ int main() {
         // Напечатать ошибку
     }
 
-    FuncResult<std::vector<Student>> q= queue.getAllStudents();
+    FuncResult<std::vector<Student>> q= queue.getQueue();
     for (auto v : (*q.second)) {
             std::cout << v.getName() << v.getGroupName() <<std::endl;
     }
 
     std::cout << "\npush\n"<<std::endl;
-    queue.push(1);
-    queue.push(2);
-    queue.push(3);
-    queue.push(4);
+    // queue.push(1);
+    // queue.push(2);
+    // queue.push(3);
+    // queue.push(4);
     queue.push(5);
 
-    q = queue.getAllStudents();
+    q = queue.getQueue();
 
     for (auto v : (*q.second)) {
             std::cout << v.getName() << v.getGroupName() <<std::endl;
@@ -55,7 +55,7 @@ int main() {
     
     queue.pop();
 
-    q = queue.getAllStudents();
+    q = queue.getQueue();
 
     for (auto v : (*q.second)) {
             std::cout << v.getName() << v.getGroupName() <<std::endl;
@@ -65,7 +65,7 @@ int main() {
     
     queue.swap(4, 2);
 
-    q = queue.getAllStudents();
+    q = queue.getQueue();
 
     for (auto v : (*q.second)) {
             std::cout << v.getName() << v.getGroupName() <<std::endl;
@@ -76,7 +76,7 @@ int main() {
     
     queue.skip();
 
-    q = queue.getAllStudents();
+    q = queue.getQueue();
 
     for (auto v : (*q.second)) {
             std::cout << v.getName() << v.getGroupName() <<std::endl;
@@ -86,7 +86,7 @@ int main() {
     
     queue.give_up(3);
 
-    q = queue.getAllStudents();
+    q = queue.getQueue();
 
     for (auto v : (*q.second)) {
             std::cout << v.getName() << v.getGroupName() <<std::endl;

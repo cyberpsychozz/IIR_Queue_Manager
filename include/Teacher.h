@@ -14,24 +14,24 @@ private:
     std::string username_tg;
 
 public:
-    // Constructor
-    Teacher() : Teacher(0, "", "", "") {}
-
+    // Constructors
+    Teacher();
     Teacher(int teacherId, const std::string& teacherName, 
-            const std::string& teacherLogin, const std::string& teacherUsernameTg)
-        : id(teacherId), name(teacherName), login(teacherLogin), username_tg(teacherUsernameTg) {}
+            const std::string& teacherLogin, const std::string& teacherUsernameTg);
+    ~Teacher();
 
-    ~Teacher() = default;
+    // Getters
+    int getId() const;
+    const std::string& getName() const;
+    const std::string& getLogin() const;
+    const std::string& getUsernameTg() const;
 
-    std::vector<Subject> getSubjects(Database& db) const;
+    // Setters
+    void setId(int newId);
+    void setName(const std::string& newName);
+    void setLogin(const std::string& newLogin);
+    void setUsernameTg(const std::string& newUsernameTg);
 
-    int getId() const { return id; }
-    const std::string& getName() const { return name; }
-    const std::string& getLogin() const { return login; }
-    const std::string& getUsernameTg() const { return username_tg; }
-
-    void setId(int newId) { id = newId; }
-    void setName(const std::string& newName) { name = newName; }
-    void setLogin(const std::string& newLogin) { login = newLogin; }
-    void setUsernameTg(const std::string& newUsernameTg) { username_tg = newUsernameTg; }
+    // Functions
+    FuncResult<std::vector<Subject>> getSubjects(Database& db) const;
 };

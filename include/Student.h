@@ -1,29 +1,33 @@
 #pragma once
 #include <string>
+#include "Subject.h"
 
 class Student 
 {
 private:
     int id;
+    int group_name;
     std::string Name;
     std::string login;
     std::string username_tg;     // Telegram username
-    std::string group_name;
     // Arrangement
     // Score
 public:
     // Getters
-    int getId() const { return id; }
-    const std::string& getName() const { return Name; }
-    const std::string& getLogin() const { return login; }
-    const std::string& getUsernameTg() const { return username_tg; }
-    const std::string& getGroupName() const { return group_name; }
+    int getId() const;
+    int getGroupName() const;
+    const std::string& getName() const;
+    const std::string& getLogin() const;
+    const std::string& getUsernameTg() const;
 
     // Setters
-    void setId(int newId) { id = newId; }
-    void setName(const std::string& newName) { Name = newName; }
-    void setLogin(const std::string& newLogin) { login = newLogin; }
-    void setUsernameTg(const std::string& newUsernameTg) { username_tg = newUsernameTg; }
-    void setGroupName(const std::string& newGroupName) { group_name = newGroupName; }
+    void setId(int newId);
+    void setGroupName(int newGroupName);
+    void setName(const std::string& newName);
+    void setLogin(const std::string& newLogin);
+    void setUsernameTg(const std::string& newUsernameTg);
+
+    // Functions
+    FuncResult<std::vector<Subject>> getSubjects(Database& db) const;
 
 };

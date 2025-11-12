@@ -12,11 +12,11 @@ private:
     Database& db;
 
 public:
+    // Constructor
     Queue(int subject_id, Database& database);
-        // : _Subject_id(subject_id), db(database) {}
 
     // === Методы с ошибками ===
-    FuncResult<int> push(int student_id);
+    FuncResult<int> push(int student_id); // FIXME чё-то как-то не так работает, надо тестить (все функции)
     FuncResult<bool> pop();
     FuncResult<bool> swap(int pos1, int pos2);
     FuncResult<bool> skip();
@@ -25,5 +25,5 @@ public:
     FuncResult<int> getPosition(int student_id) const;
     FuncResult<int> getLen() const;
 
-    FuncResult<std::vector<Student>> getAllStudents() const;
+    FuncResult<std::vector<Student>> getQueue() const; // Переименовал
 };

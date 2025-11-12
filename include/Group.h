@@ -4,12 +4,16 @@
 #include "Database.h"
 #include <vector>
 
-class Group
+class Group // TODO Реализовать функции класса
 {
 private:
     int group_id;
 
 public:
+    // Constructor
+    Group(int groupId);
+
+    // Functions
     std::vector<Student> getStudents(Database& db) const;
     std::vector<Subject> getSubjects(Database& db) const;
 
