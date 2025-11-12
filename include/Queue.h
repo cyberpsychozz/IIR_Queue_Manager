@@ -15,14 +15,14 @@ public:
         : _Subject_id(subject_id), db(database) {}
 
     // === Методы с ошибками ===
-    QueueResult<int> push(int student_id);
-    QueueResult<bool> pop();
-    QueueResult<bool> swap(int pos1, int pos2);
-    QueueResult<bool> skip();
-    QueueResult<bool> give_up(int student_id);
+    FuncResult<int> push(int student_id);
+    FuncResult<bool> pop();
+    FuncResult<bool> swap(int pos1, int pos2);
+    FuncResult<bool> skip();
+    FuncResult<bool> give_up(int student_id);
 
-    QueueResult<int> getPosition(int student_id) const;
-    QueueResult<int> getLen() const;
+    FuncResult<int> getPosition(int student_id) const;
+    FuncResult<int> getLen() const;
 
-    QueueResult<std::vector<Student>> getAllStudents() const;
+    FuncResult<std::vector<Student>> getAllStudents() const;
 };

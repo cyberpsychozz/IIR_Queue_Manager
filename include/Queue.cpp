@@ -46,9 +46,74 @@ FuncResult<int>Queue::push(int student_id){
     return{FuncError::OK, new_pos};
     
 }
-int pop();
-int swap(int pos1, int pos2); // Обмен позициями в очереди (служебный или по согласию)
-int skip(); // Пропуск одного человека вперёд
+FuncResult<bool>Queue::pop(){
+    if (!db.get_conn()){
+        return{FuncError::DB_NOT_OPEN, std::nullopt};
+    }
+    
+    const char* sql_del = "DELETE FROM Queues WHERE Subject_Id = ? AND Position = 1;";
+    const char* sql_shift = "UPDATE Queues SET Position = Position - 1 WHERE Subject_Id = ?;";
+
+
+    sqlite3_stmt* stmt;
+    // Удаление студента
+    if (sqlite3_prepare_v2(db.get_conn(), sql_del, -1, &stmt, nullptr) != SQLITE_OK) {
+        return {FuncError::PREPARE_FAILED, std::nullopt};
+    }
+    sqlite3_bind_int(stmt, 1, _Subject_id);
+    if (sqlite3_step(stmt) != SQLITE_DONE){
+        // не выполнился step
+        sqlite3_finalize(stmt);
+        return {FuncError::STEP_FAILED, std::nullopt};
+    }
+    sqlite3_finalize(stmt);
+    // Обновление очереди
+    if (sqlite3_prepare_v2(db.get_conn(), sql_shift, -1, &stmt, nullptr) != SQLITE_OK) {
+        return {FuncError::PREPARE_FAILED, std::nullopt};
+    }
+    sqlite3_bind_int(stmt, 1, _Subject_id);
+    int rc = sqlite3_step(stmt)
+    sqlite3_finalize(stmt);
+    
+    return{FuncError::OK, rc == SQLITE_DONE};
+}
+
+FuncResult<bool>Queue::swap(int pos1, int pos2){// Обмен позициями в очереди (служебный или по согласию)
+    if (!db.get_conn()){
+        return{FuncError::DB_NOT_OPEN, std::nullopt};
+    }
+
+    if(pos1 <= 0 || pos2 <= 0 || pos1 == pos2){
+        return{FuncError::INVALID_POSITION, std::nullopt};
+    }
+
+    const char* sql = R"(
+        UPDATE Queues SET Position = CASE
+            WHEN Position = ? THEN ?
+            WHEN Position = ? THEN ?
+        END
+        WHERE Subject_Id = ? AND Position IN (?, ?);
+    )";
+
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(db.get_conn(), sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        return {FuncError::PREPARE_FAILED, std::nullopt};
+    }
+
+    sqlite3_bind_int(stmt, 1, pos1); sqlite3_bind_int(stmt, 2, pos2);
+    sqlite3_bind_int(stmt, 3, pos2); sqlite3_bind_int(stmt, 4, pos1);
+    sqlite3_bind_int(stmt, 5, _Subject_id);
+    sqlite3_bind_int(stmt, 6, pos1); sqlite3_bind_int(stmt, 7, pos2);
+
+    int rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+    
+    
+    return{FuncError::OK, rc == SQLITE_DONE && sqlite3_changes(db.get_conn()) == 2};
+}
+FuncResult<bool>Queue::skip(){
+    return swap(1, 2);
+} // Пропуск одного человека вперёд
 int give_up(int student_id); // Удаление из очереди по желанию Студента
 // std_optional 
 int getPosition(int student_id) const; // Своя позиция в очереди
