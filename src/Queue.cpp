@@ -4,7 +4,7 @@
 #include "Error.h"
 #include <vector>
 
-// Queue(int subject_id, Database& database) : _Subject_id(subject_id), db(database) {}
+Queue::Queue(int subject_id, Database& database) : _Subject_id(subject_id), db(database) {}
 
 inline bool is_connection_open(sqlite3* conn) {
     return conn != nullptr;

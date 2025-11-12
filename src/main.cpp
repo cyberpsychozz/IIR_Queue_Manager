@@ -3,21 +3,23 @@
 #include "Group.h"
 #include "Student.h"
 #include "Subject.h"
+#include <vector>
 
 
 int main() {
 
     Database db("../data/test.db");
     Subject subj(1, "ООП", 1);
+    Queue queue(1, db);
 
     FuncResult<Teacher> res = subj.getTeacher(db);
     if (res.second) {
         std::cout << (*res.second).getName() << std::endl;
     }
     else {
-        // printf("%s\n", res.first);
-        // Напечатать ошибку
+        printf("%s\n", res.first);
     }
+
 
     FuncResult<std::vector<Seminar>> res2 = subj.getClasses(db, 24940);
 
@@ -31,6 +33,67 @@ int main() {
         // Напечатать ошибку
     }
 
+    FuncResult<std::vector<Student>> q= queue.getAllStudents();
+    for (auto v : (*q.second)) {
+            std::cout << v.getName() << v.getGroupName() <<std::endl;
+    }
 
+    std::cout << "\npush\n"<<std::endl;
+    queue.push(1);
+    queue.push(2);
+    queue.push(3);
+    queue.push(4);
+    queue.push(5);
+
+    q = queue.getAllStudents();
+
+    for (auto v : (*q.second)) {
+            std::cout << v.getName() << v.getGroupName() <<std::endl;
+    }
+
+    std::cout << "\npop\n"<<std::endl;
+    
+    queue.pop();
+
+    q = queue.getAllStudents();
+
+    for (auto v : (*q.second)) {
+            std::cout << v.getName() << v.getGroupName() <<std::endl;
+    }
+
+    std::cout << "\nswap\n"<<std::endl;
+    
+    queue.swap(4, 2);
+
+    q = queue.getAllStudents();
+
+    for (auto v : (*q.second)) {
+            std::cout << v.getName() << v.getGroupName() <<std::endl;
+    }
+
+
+    std::cout << "\nskip\n"<<std::endl;
+    
+    queue.skip();
+
+    q = queue.getAllStudents();
+
+    for (auto v : (*q.second)) {
+            std::cout << v.getName() << v.getGroupName() <<std::endl;
+    }
+
+    std::cout << "\ngive up\n"<<std::endl;
+    
+    queue.give_up(3);
+
+    q = queue.getAllStudents();
+
+    for (auto v : (*q.second)) {
+            std::cout << v.getName() << v.getGroupName() <<std::endl;
+    }
+
+    queue.pop();
+    queue.pop();
+    queue.pop();
     
 }
