@@ -73,7 +73,7 @@ FuncResult<bool>Queue::pop(){
         return {FuncError::PREPARE_FAILED, std::nullopt};
     }
     sqlite3_bind_int(stmt, 1, _Subject_id);
-    int rc = sqlite3_step(stmt)
+    int rc = sqlite3_step(stmt);
     sqlite3_finalize(stmt);
     
     return{FuncError::OK, rc == SQLITE_DONE};
@@ -126,8 +126,8 @@ FuncResult<bool>Queue::give_up(int student_id){
     }
     
     auto pos_res = getPosition(student_id);
-    if (pos_res.first != QueueError::OK || !pos_res.second.has_value())
-        return {QueueError::STUDENT_NOT_IN_QUEUE, std::nullopt};
+    if (pos_res.first != FuncError::OK || !pos_res.second.has_value())
+        return {FuncError::STUDENT_NOT_IN_QUEUE, std::nullopt};
 
     int pos = pos_res.second.value();
 
@@ -154,22 +154,23 @@ FuncResult<bool>Queue::give_up(int student_id){
         return {FuncError::PREPARE_FAILED, std::nullopt};
     }
     sqlite3_bind_int(stmt, 1, _Subject_id);
-    sqlite3_bind_int(stmt, 2, pos)
-    int rc = sqlite3_step(stmt)
+    sqlite3_bind_int(stmt, 2, pos);
+    int rc = sqlite3_step(stmt);
     sqlite3_finalize(stmt);
     
     return{FuncError::OK, rc == SQLITE_DONE};
 }
 
 // Своя позиция в очереди
-QueueResult<int> Queue::getPosition(int student_id) const {
-    if (!is_open(db.get_conn())) return {QueueError::DB_NOT_OPEN, std::nullopt};
-
+FuncResult<int> Queue::getPosition(int student_id) const {
+   if (!db.get_conn()){
+        return{FuncError::DB_NOT_OPEN, std::nullopt};
+    }
     const char* sql = "SELECT Position FROM Queues WHERE Subject_Id = ? AND Student_Id = ?;";
     sqlite3_stmt* stmt;
 
     if (sqlite3_prepare_v2(db.get_conn(), sql, -1, &stmt, nullptr) != SQLITE_OK)
-        return {QueueError::PREPARE_FAILED, std::nullopt};
+        return {FuncError::PREPARE_FAILED, std::nullopt};
 
     sqlite3_bind_int(stmt, 1, _Subject_id);
     sqlite3_bind_int(stmt, 2, student_id);
@@ -180,13 +181,14 @@ QueueResult<int> Queue::getPosition(int student_id) const {
     }
     sqlite3_finalize(stmt);
 
-    return pos >= 1 ? QueueResult<int>{QueueError::OK, pos}
-                    : QueueResult<int>{QueueError::NOT_FOUND, std::nullopt};
+    return pos >= 1 ? FuncResult<int>{FuncError::OK, pos}
+                    : FuncResult<int>{FuncError::NOT_FOUND, std::nullopt};
 }
 
 FuncResult<int> Queue::getLen() const {
-    if (!is_open(db.get_conn())) return {FuncError::DB_NOT_OPEN, std::nullopt};
-
+    if (!db.get_conn()){
+        return{FuncError::DB_NOT_OPEN, std::nullopt};
+    }
     const char* sql = "SELECT COUNT(*) FROM Queues WHERE Subject_Id = ?;";
     sqlite3_stmt* stmt;
 
@@ -206,7 +208,7 @@ FuncResult<int> Queue::getLen() const {
 
 
 
-FuncResult<std::vector<Student>>Queue::getAllStudents(const Queue& queue){
+FuncResult<std::vector<Student>>Queue::getAllStudents() const{
     // hui
     std::vector<Student> students;
 
@@ -253,7 +255,7 @@ FuncResult<std::vector<Student>>Queue::getAllStudents(const Queue& queue){
         std::string err = "SQL step error: ";
         err += sqlite3_errmsg(db.get_conn());
         sqlite3_finalize(stmt);
-        throw {FuncError::STEP_FAILED, std::nullopt};
+        return {FuncError::STEP_FAILED, std::nullopt};
     }
 
     sqlite3_finalize(stmt);
