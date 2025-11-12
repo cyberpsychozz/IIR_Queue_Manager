@@ -33,4 +33,8 @@ public:
         return sqlite3_close(_conn) == SQLITE_OK;
     }
 
+    get_teacher_subjects;
+
+    get_student subjects;
+
 };
