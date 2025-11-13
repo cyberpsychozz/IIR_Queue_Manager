@@ -14,8 +14,8 @@ public:
     Group(int groupId);
 
     // Functions
-    std::vector<Student> getStudents(Database& db) const;
-    std::vector<Subject> getSubjects(Database& db) const;
+    FuncResult<std::vector<Student>> getStudents(Database& db) const;
+    FuncResult<std::vector<Subject>> getSubjects(Database& db) const;
 
     void addStudent(int student_id, Database& db);
     void deleteStudent(int student_id, Database& db);
