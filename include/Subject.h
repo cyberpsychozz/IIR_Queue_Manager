@@ -6,6 +6,9 @@
 #include <vector>
 #include <string>
 
+class Database;
+class Teacher;
+
 class Subject{
 private: 
     int id;

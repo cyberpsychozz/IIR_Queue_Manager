@@ -1,7 +1,11 @@
 #pragma once
 #include <string>
 #include "Subject.h"
+#include "Error.h"
+#include "Database.h"
 
+class Subject;
+class Database;
 class Student 
 {
 private:
