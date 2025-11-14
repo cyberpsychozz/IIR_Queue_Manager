@@ -98,28 +98,6 @@ FuncResult<Teacher> Subject::getTeacher(Database& db) const {
     return {FuncError::OK, prepod};
 }
 
-        prepod.setName(std::string(reinterpret_cast<const char*>(name)));
-        prepod.setLogin(std::string(reinterpret_cast<const char*>(login)));
-        if (tg_id != nullptr) {
-            prepod.setUsernameTg(std::string(reinterpret_cast<const char*>(tg_id)));
-        }
-    } 
-    // Не вернулся результат    
-    else if (rc == SQLITE_DONE) {
-        sqlite3_finalize(stmt);
-        return {FuncError::NOT_FOUND, std::nullopt};
-    }
-    // Вернулась ошибка 
-    else {
-        sqlite3_finalize(stmt);
-        return {FuncError::STEP_FAILED, std::nullopt};
-    }
-    
-    sqlite3_finalize(stmt);
-
-    return {FuncError::OK, prepod};
-}
-
 FuncResult<std::vector<Seminar>> Subject::getClasses(Database& db, int group) const {
     if (!db.get_conn()) {
         return {FuncError::CONNECTION_CLOSED, std::nullopt};
