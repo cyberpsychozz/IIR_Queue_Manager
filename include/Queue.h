@@ -5,7 +5,7 @@
 #include <vector>
 
 class Database;
-struct Student;
+class Student;
 class Queue {
 private:
     int _Subject_id;

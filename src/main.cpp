@@ -55,21 +55,14 @@ int main() {
     
     // queue.pop();
 
-    FuncResult<std::vector<Student>> q = queue.getQueue();
-
-    for (auto v : (*q.second)) {
-            std::cout << v.getName() << v.getGroupName() <<std::endl;
+    auto res = queue.swap(1, 3);
+    if (res.first != FuncError::OK) {
+        std::cerr << "Swap failed: " << static_cast<int>(res.first) << std::endl;
+    } else {
+        std::cout << "Swap OK\n";
     }
 
-    std::cout << "\nswap\n"<<std::endl;
     
-    queue.swap(4, 2);
-
-    q = queue.getQueue();
-
-    for (auto v : (*q.second)) {
-            std::cout << v.getName() << v.getGroupName() <<std::endl;
-    }
 
 
     // std::cout << "\nskip\n"<<std::endl;

@@ -80,13 +80,12 @@ FuncResult<bool>Queue::pop(){
 }
 
 // Обмен позициями в очереди (служебный или по согласию)
-FuncResult<bool>Queue::swap(int pos1, int pos2){
-    if (!db.get_conn()){
-        return{FuncError::DB_NOT_OPEN, std::nullopt};
+FuncResult<bool> Queue::swap(int pos1, int pos2) {
+    if (!db.get_conn()) {
+        return {FuncError::DB_NOT_OPEN, std::nullopt};
     }
-
-    if(pos1 <= 0 || pos2 <= 0 || pos1 == pos2){
-        return{FuncError::INVALID_POSITION, std::nullopt};
+    if (pos1 <= 0 || pos2 <= 0 || pos1 == pos2) {
+        return {FuncError::INVALID_POSITION, std::nullopt};
     }
 
     const char* sql = R"(
@@ -97,7 +96,7 @@ FuncResult<bool>Queue::swap(int pos1, int pos2){
         WHERE Subject_Id = ? AND Position IN (?, ?);
     )";
 
-    sqlite3_stmt* stmt;
+    sqlite3_stmt* stmt = nullptr;
     if (sqlite3_prepare_v2(db.get_conn(), sql, -1, &stmt, nullptr) != SQLITE_OK) {
         return {FuncError::PREPARE_FAILED, std::nullopt};
     }
@@ -108,10 +107,17 @@ FuncResult<bool>Queue::swap(int pos1, int pos2){
     sqlite3_bind_int(stmt, 6, pos1); sqlite3_bind_int(stmt, 7, pos2);
 
     int rc = sqlite3_step(stmt);
+    int changes = sqlite3_changes(db.get_conn());
     sqlite3_finalize(stmt);
-    
-    
-    return{FuncError::OK, rc == SQLITE_DONE && sqlite3_changes(db.get_conn()) == 2};
+
+    if (rc != SQLITE_DONE) {
+        return {FuncError::STEP_FAILED, std::nullopt};
+    }
+    if (changes != 2) {
+        return {FuncError::NOT_FOUND, std::nullopt}; // или INVALID_POSITION
+    }
+
+    return {FuncError::OK, true};
 }
 
 // Пропуск одного человека вперёд
