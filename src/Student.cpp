@@ -1,5 +1,8 @@
 #include "Student.h"
 
+// Constructor
+Student::Student() : id(0), group_name(0), Name(""), login(""), username_tg("") {}
+
 // Getters
 int Student::getId() const { return id; }
 int Student::getGroupName() const { return group_name; }

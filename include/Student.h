@@ -17,6 +17,9 @@ private:
     // Arrangement
     // Score
 public:
+    // Constructor
+    Student();
+
     // Getters
     int getId() const;
     int getGroupName() const;

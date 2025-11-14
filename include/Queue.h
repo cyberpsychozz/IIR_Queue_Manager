@@ -6,6 +6,7 @@
 
 class Database;
 class Student;
+
 class Queue {
 private:
     int _Subject_id;

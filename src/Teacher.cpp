@@ -1,11 +1,11 @@
 #include "Teacher.h"
 
 // Constructors
-Teacher::Teacher() : Teacher(0, "", "", "") {}
-
 Teacher::Teacher(int teacherId, const std::string& teacherName, 
         const std::string& teacherLogin, const std::string& teacherUsernameTg)
     : id(teacherId), name(teacherName), login(teacherLogin), username_tg(teacherUsernameTg) {}
+
+Teacher::Teacher() : Teacher(0, "", "", "") {}
 
 Teacher::~Teacher() = default;
 
