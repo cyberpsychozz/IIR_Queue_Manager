@@ -31,8 +31,8 @@ public:
     void setName(const std::string& newName);
 
     // Functions
-    FuncResult<Teacher> getTeacher(Database& db) const;
-    FuncResult<std::vector<Seminar>> getClasses(Database& db, int group) const;
-    FuncError addClass(const Seminar& seminar, Database& db, int group); // TODO 2 функции не дописано
-    FuncError deleteClass(const Seminar& seminar, Database& db);
+    FuncResult<Teacher> getTeacher() const;
+    FuncResult<std::vector<Seminar>> getClasses(int group) const;
+    FuncError addClass(const Seminar& seminar, int group);
+    FuncError deleteClass(int sem_id);
 };

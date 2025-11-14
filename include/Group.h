@@ -14,14 +14,14 @@ public:
     Group(int groupId);
 
     // Functions
-    FuncResult<std::vector<Student>> getStudents(Database& db) const;
-    FuncResult<std::vector<Subject>> getSubjects(Database& db) const;
+    FuncResult<std::vector<Student>> getStudents() const;
+    FuncResult<std::vector<Subject>> getSubjects() const;
 
-    void addStudent(int student_id, Database& db);
-    void deleteStudent(int student_id, Database& db);
+    void addStudent(int student_id);
+    void deleteStudent(int student_id);
 
-    void addSubject(int student_id, Database& db);
-    void deleteSubject(int student_id, Database& db);
+    void addSubject(int student_id);
+    void deleteSubject(int student_id);
 
     // Leaderboard когда-нибудь когда нам будут платить деньги
 

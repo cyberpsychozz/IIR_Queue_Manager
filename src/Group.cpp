@@ -4,7 +4,9 @@
 Group::Group(int groupId) : group_id(groupId) {}
 
 // Functions
-FuncResult<std::vector<Student>> Group::getStudents(Database& db) const {
+FuncResult<std::vector<Student>> Group::getStudents() const {
+    auto &db = Database::getInstance();
+
     if (!db.get_conn()) {
         return {FuncError::CONNECTION_CLOSED, std::nullopt};
     }
@@ -30,7 +32,7 @@ FuncResult<std::vector<Student>> Group::getStudents(Database& db) const {
     
     while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
 
-        student.setId(id);
+        student.setId(sqlite3_column_int(stmt, 0));
         student.setGroupName(sqlite3_column_int(stmt, 1));
 
         const char* name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
@@ -57,7 +59,9 @@ FuncResult<std::vector<Student>> Group::getStudents(Database& db) const {
     return {FuncError::OK, students};
 }
 
-FuncResult<std::vector<Subject>> Group::getSubjects(Database& db) const { // FIXME Дублирует функцию студента
+FuncResult<std::vector<Subject>> Group::getSubjects() const { // FIXME Дублирует функцию студента
+    auto &db = Database::getInstance();
+    
     if (!db.get_conn()) {
         return {FuncError::CONNECTION_CLOSED, std::nullopt};
     }

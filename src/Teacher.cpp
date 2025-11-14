@@ -22,7 +22,9 @@ void Teacher::setLogin(const std::string& newLogin) { login = newLogin; }
 void Teacher::setUsernameTg(const std::string& newUsernameTg) { username_tg = newUsernameTg; }
 
 // Functions
-FuncResult<std::vector<Subject>> Teacher::getSubjects(Database& db) const {
+FuncResult<std::vector<Subject>> Teacher::getSubjects() const {
+    auto &db = Database::getInstance();
+
     if (!db.get_conn()) {
         return {FuncError::CONNECTION_CLOSED, std::nullopt};
     }

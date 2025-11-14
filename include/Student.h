@@ -35,6 +35,6 @@ public:
     void setUsernameTg(const std::string& newUsernameTg);
 
     // Functions
-    FuncResult<std::vector<Subject>> getSubjects(Database& db) const;
+    FuncResult<std::vector<Subject>> getSubjects() const;
 
 };

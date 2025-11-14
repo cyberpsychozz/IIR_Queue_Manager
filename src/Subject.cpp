@@ -15,7 +15,9 @@ void Subject::setId(int newId) { id = newId; }
 void Subject::setTeacherId(int newTeacherId) { teacher_id = newTeacherId; }
 void Subject::setName(const std::string& newName) { name = newName; }
 
-FuncResult<Teacher> Subject::getTeacher(Database& db) const {
+FuncResult<Teacher> Subject::getTeacher() const {
+    auto &db = Database::getInstance();
+
     // Проверяем, что соединение открыто
     if (!db.get_conn()) {
         return {FuncError::CONNECTION_CLOSED, std::nullopt};
@@ -68,7 +70,9 @@ FuncResult<Teacher> Subject::getTeacher(Database& db) const {
     return {FuncError::OK, prepod};
 }
 
-FuncResult<std::vector<Seminar>> Subject::getClasses(Database& db, int group) const {
+FuncResult<std::vector<Seminar>> Subject::getClasses(int group) const {
+    auto &db = Database::getInstance();
+
     if (!db.get_conn()) {
         return {FuncError::CONNECTION_CLOSED, std::nullopt};
     }
@@ -110,7 +114,9 @@ FuncResult<std::vector<Seminar>> Subject::getClasses(Database& db, int group) co
     return {FuncError::OK, sems};
 }
 
-FuncError Subject::addClass(const Seminar& seminar, Database& db, int group) {
+FuncError Subject::addClass(const Seminar& seminar, int group) {
+    auto &db = Database::getInstance();
+
     if (!db.get_conn()) {
         return FuncError::CONNECTION_CLOSED;
     }
@@ -135,6 +141,47 @@ FuncError Subject::addClass(const Seminar& seminar, Database& db, int group) {
     return FuncError::OK;
 }
 
-FuncError deleteClass(const Seminar& seminar, Database& db) {
+FuncError Subject::deleteClass(int sem_id) {
+    auto &db = Database::getInstance();
 
+    if (!db.get_conn()) {
+        return FuncError::CONNECTION_CLOSED;
+    }
+
+    std::string table_name = "Sems_" + std::to_string(Subject::id);
+    std::string sql_del = "DELETE FROM " + table_name + " WHERE Id = ?;";
+    std::string sql_shift = "UPDATE " + table_name + " SET Id = Id - 1 WHERE Id > ?;";
+
+    sqlite3_stmt* stmt;
+    // Удаление занятия
+    if (sqlite3_prepare_v2(db.get_conn(), sql_del.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+        return FuncError::PREPARE_FAILED;
+    }
+
+    sqlite3_bind_int(stmt, 1, sem_id);
+
+    if (sqlite3_step(stmt) != SQLITE_DONE){
+        // не выполнился step
+        sqlite3_finalize(stmt);
+        return FuncError::STEP_FAILED;
+    }
+
+    sqlite3_finalize(stmt);
+
+    // Обновление очереди
+    if (sqlite3_prepare_v2(db.get_conn(), sql_shift.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+        return FuncError::PREPARE_FAILED;
+    }
+
+    sqlite3_bind_int(stmt, 1, sem_id);
+
+    if (sqlite3_step(stmt) != SQLITE_DONE) {
+        // не выполнился step
+        sqlite3_finalize(stmt);
+        return FuncError::STEP_FAILED;
+    }
+
+    sqlite3_finalize(stmt);
+    
+    return FuncError::OK;
 }

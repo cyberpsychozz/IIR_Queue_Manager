@@ -1,4 +1,3 @@
-// Database.cpp
 #include "Database.h"
 #include <iostream>
 

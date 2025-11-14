@@ -18,7 +18,9 @@ void Student::setLogin(const std::string& newLogin) { login = newLogin; }
 void Student::setUsernameTg(const std::string& newUsernameTg) { username_tg = newUsernameTg; }
 
 // Functions
-FuncResult<std::vector<Subject>> Student::getSubjects(Database& db) const {
+FuncResult<std::vector<Subject>> Student::getSubjects() const {
+    auto &db = Database::getInstance();
+
     if (!db.get_conn()) {
         return {FuncError::CONNECTION_CLOSED, std::nullopt};
     }
