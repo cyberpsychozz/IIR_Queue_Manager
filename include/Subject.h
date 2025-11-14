@@ -33,6 +33,6 @@ public:
     // Functions
     FuncResult<Teacher> getTeacher(Database& db) const;
     FuncResult<std::vector<Seminar>> getClasses(Database& db, int group) const;
-    FuncError addClass(const Seminar& seminar, Database& db); // TODO 2 функции не дописано
+    FuncError addClass(const Seminar& seminar, Database& db, int group); // TODO 2 функции не дописано
     FuncError deleteClass(const Seminar& seminar, Database& db);
 };

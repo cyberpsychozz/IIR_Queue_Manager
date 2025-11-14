@@ -45,36 +45,6 @@ FuncResult<Teacher> Subject::getTeacher(Database& db) const {
         const unsigned char* login = sqlite3_column_text(stmt, 2);
         const unsigned char* tg_id = sqlite3_column_text(stmt, 3);
         
-        prepod.setId(teacherId);FuncResult<Teacher> Subject::getTeacher(Database& db) const {
-    // Проверяем, что соединение открыто
-    if (!db.get_conn()) {
-        return {FuncError::CONNECTION_CLOSED, std::nullopt};
-    }
-
-    // SQLite запрос
-    const char* sql = R"(
-        SELECT T.Id, T.name, T.Login, T.TG_id
-        FROM Subjects S
-        JOIN Teachers T ON T.Id = S.Teacher_Id
-        WHERE S.Id = ?
-    )";
-
-    sqlite3_stmt* stmt = nullptr;
-    auto rc = sqlite3_prepare_v2(db.get_conn(), sql, -1, &stmt, nullptr);
-
-    sqlite3_bind_int(stmt, 1, id);
-
-    Teacher prepod;
-
-    rc = sqlite3_step(stmt);
-    
-    // Вернулась строка
-    if (rc == SQLITE_ROW) {
-        int teacherId = sqlite3_column_int(stmt, 0);
-        const unsigned char* name = sqlite3_column_text(stmt, 1);
-        const unsigned char* login = sqlite3_column_text(stmt, 2);
-        const unsigned char* tg_id = sqlite3_column_text(stmt, 3);
-        
         prepod.setId(teacherId);
         prepod.setName(std::string(reinterpret_cast<const char*>(name)));
         prepod.setLogin(std::string(reinterpret_cast<const char*>(login)));
@@ -140,8 +110,29 @@ FuncResult<std::vector<Seminar>> Subject::getClasses(Database& db, int group) co
     return {FuncError::OK, sems};
 }
 
-FuncError addClass(const Seminar& seminar, Database& db) {
+FuncError Subject::addClass(const Seminar& seminar, Database& db, int group) {
+    if (!db.get_conn()) {
+        return FuncError::CONNECTION_CLOSED;
+    }
 
+    std::string table_name = "Sems_" + std::to_string(Subject::id);
+    std::string sql = "INSERT INTO " + table_name + " (Id, Date, Comment, Groups) VALUES ((SELECT max(Id) from Sems_1) + 1, ?, ?, ?)";
+
+    sqlite3_stmt* stmt = nullptr;
+    auto rc = sqlite3_prepare_v2(db.get_conn(), sql.c_str(), -1, &stmt, nullptr);
+
+    sqlite3_bind_text(stmt, 1, seminar.date.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 2, seminar.comment.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_int(stmt, 3, group);
+
+    rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+    
+    if(rc != SQLITE_DONE){
+        return FuncError::STEP_FAILED;
+    }
+
+    return FuncError::OK;
 }
 
 FuncError deleteClass(const Seminar& seminar, Database& db) {
