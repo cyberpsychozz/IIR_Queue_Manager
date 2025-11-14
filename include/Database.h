@@ -1,23 +1,28 @@
+// Database.h
 #pragma once
 #include <sqlite3.h>
 #include <string>
-#include <vector>
-#include <iostream>
-#include "Student.h"
-#include "Queue.h"
+#include <memory>
 
 class Database {
 private:
-    sqlite3* _conn;
-    std::string _path;
+    sqlite3* conn = nullptr;
+    std::string path;
+
+    // Приватный конструктор — нельзя создать напрямую
+    Database(const std::string& db_path);
+    
+    // Запрещаем копирование
+    Database(const Database&) = delete;
+    Database& operator=(const Database&) = delete;
 
 public:
-    Database(const std::string& path);
     ~Database();
 
-    sqlite3* get_conn() const;
-    std::string get_path() const;
+    // Единственный способ получить экземпляр
+    static Database& getInstance(const std::string& db_path = "bot.db");
 
     bool open();
-    bool close();
+    void close();
+    sqlite3* get_conn() const { return conn; }
 };

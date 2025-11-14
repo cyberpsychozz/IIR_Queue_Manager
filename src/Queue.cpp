@@ -3,8 +3,9 @@
 #include <optional>
 #include "Error.h"
 #include <vector>
+#include "Queue.h"
 
-Queue::Queue(int subject_id, Database& database) : _Subject_id(subject_id), db(database) {}
+Queue::Queue(int subject_id) : _Subject_id(subject_id){}
 
 inline bool is_connection_open(sqlite3* conn) {
     return conn != nullptr;
@@ -13,6 +14,8 @@ inline bool is_connection_open(sqlite3* conn) {
 
 // Добавление человека в очередь
 FuncResult<int>Queue::push(int student_id){
+    auto& db = Database::getInstance();
+
     if (!db.get_conn()){
         return{FuncError::DB_NOT_OPEN, std::nullopt};
     }
@@ -48,6 +51,8 @@ FuncResult<int>Queue::push(int student_id){
 
 // Удаление человека
 FuncResult<bool>Queue::pop(){
+    auto& db = Database::getInstance();
+
     if (!db.get_conn()){
         return{FuncError::DB_NOT_OPEN, std::nullopt};
     }
@@ -81,6 +86,8 @@ FuncResult<bool>Queue::pop(){
 
 // Обмен позициями в очереди (служебный или по согласию)
 FuncResult<bool> Queue::swap(int pos1, int pos2) {
+    auto& db = Database::getInstance();
+
     if (!db.get_conn()) {
         return {FuncError::DB_NOT_OPEN, std::nullopt};
     }
@@ -127,6 +134,8 @@ FuncResult<bool>Queue::skip(){
 
  // Удаление из очереди по желанию Студента
 FuncResult<bool>Queue::give_up(int student_id){
+    auto& db = Database::getInstance();
+
     if (!db.get_conn()){
         return{FuncError::DB_NOT_OPEN, std::nullopt};
     }
@@ -169,6 +178,7 @@ FuncResult<bool>Queue::give_up(int student_id){
 
 // Своя позиция в очереди
 FuncResult<int> Queue::getPosition(int student_id) const {
+    auto& db = Database::getInstance();
    if (!db.get_conn()){
         return{FuncError::DB_NOT_OPEN, std::nullopt};
     }
@@ -192,6 +202,7 @@ FuncResult<int> Queue::getPosition(int student_id) const {
 }
 
 FuncResult<int> Queue::getLen() const {
+    auto& db = Database::getInstance();
     if (!db.get_conn()){
         return{FuncError::DB_NOT_OPEN, std::nullopt};
     }
@@ -215,7 +226,7 @@ FuncResult<int> Queue::getLen() const {
 
 
 FuncResult<std::vector<Student>>Queue::getQueue() const{
-    // hui
+    auto& db = Database::getInstance();
     std::vector<Student> students;
 
     // Проверяем, что соединение открыто

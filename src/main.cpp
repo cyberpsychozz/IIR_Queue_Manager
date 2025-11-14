@@ -8,7 +8,7 @@
 
 int main() {
 
-    Database db("../data/test.db");
+    auto& db = Database::getInstance("../data/test.db");
     Subject subj(1, "ООП", 1);
     Queue queue(1, db);
  

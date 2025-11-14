@@ -10,14 +10,14 @@ class Student;
 class Queue {
 private:
     int _Subject_id;
-    Database& db;
+    
 
 public:
     // Constructor
-    Queue(int subject_id, Database& database);
+    Queue(int subject_id);
 
     // === Методы с ошибками ===
-    FuncResult<int> push(int student_id); // FIXME чё-то как-то не так работает, надо тестить (все функции)
+    FuncResult<int> push(int student_id); //  чё-то как-то не так работает, надо тестить (все функции)
     FuncResult<bool> pop();
     FuncResult<bool> swap(int pos1, int pos2);
     FuncResult<bool> skip();
