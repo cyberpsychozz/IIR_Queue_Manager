@@ -4,13 +4,16 @@
 #include "Student.h"
 #include "Subject.h"
 #include <vector>
+#include <iostream>
 
 
 int main() {
-
+    std::cout << "penis" << std::endl;
     auto& db = Database::getInstance("../data/test.db");
+    db.open();
+    std::cout << "penis2" << std::endl;
     Subject subj(1, "ООП", 1);
-    Queue queue(1, db);
+    Queue queue(1);
  
     // FuncResult<Teacher> res = subj.getTeacher(db);
     // if (res.second) {
@@ -33,17 +36,30 @@ int main() {
     //     // Напечатать ошибку
     // }
 
-    // FuncResult<std::vector<Student>> q= queue.getQueue();
-    // for (auto v : (*q.second)) {
-    //         std::cout << v.getName() << v.getGroupName() <<std::endl;
-    // }
+    FuncResult<std::vector<Student>> q= queue.getQueue();
+    for (auto v : (*q.second)) {
+            std::cout << v.getId() << " " << v.getName() << " " << v.getGroupName() <<std::endl;
+    }
 
-    // std::cout << "\npush\n"<<std::endl;
-    // queue.push(1);
-    // queue.push(2);
-    // queue.push(3);
-    // queue.push(4);
-    // queue.push(5);
+    std::cout << "\npush\n"<<std::endl;
+    queue.push(1);
+    queue.push(2);
+    queue.push(3);
+    queue.push(4);
+    
+    q= queue.getQueue();
+    for (auto v : (*q.second)) {
+            std::cout << v.getId() << " " << v.getName() << " " << v.getGroupName() <<std::endl;
+    }
+
+    std::cout << "\n penis\n" << std::endl; 
+    queue.pop();
+    std::cout << "\n penis\n" << std::endl;
+
+    q = queue.getQueue();
+    for (auto v : (*q.second)) {
+            std::cout << v.getId() << " " << v.getName() << " " << v.getGroupName() <<std::endl;
+    }
 
     // q = queue.getQueue();
 
@@ -55,12 +71,12 @@ int main() {
     
     // queue.pop();
 
-    auto res = queue.swap(1, 3);
-    if (res.first != FuncError::OK) {
-        std::cerr << "Swap failed: " << static_cast<int>(res.first) << std::endl;
-    } else {
-        std::cout << "Swap OK\n";
-    }
+    // auto res = queue.swap(1, 3);
+    // if (res.first != FuncError::OK) {
+    //     std::cerr << "Swap failed: " << static_cast<int>(res.first) << std::endl;
+    // } else {
+    //     std::cout << "Swap OK\n";
+    // }
 
     
 

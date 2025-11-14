@@ -27,7 +27,7 @@ FuncResult<int>Queue::push(int student_id){
 
     int new_pos = LenRes.second.value() + 1;
 
-    const char* sql = "INSERT INTO Queues (Student_Id, Subject_Id, Position) VALUES (?, ?, ?);"; 
+    const char* sql = "INSERT INTO Queues (Id, Student_Id, Subject_Id, Position) VALUES ((SELECT max(Id) from Queues) + 1, ?, ?, ?);"; 
 
     sqlite3_stmt* stmt = nullptr;
     if (sqlite3_prepare_v2(db.get_conn(), sql, -1, &stmt, nullptr) != SQLITE_OK) {
@@ -58,7 +58,8 @@ FuncResult<bool>Queue::pop(){
     }
     
     const char* sql_del = "DELETE FROM Queues WHERE Subject_Id = ? AND Position = 1;";
-    const char* sql_shift = "UPDATE Queues SET Position = Position - 1 WHERE Subject_Id = ?;";
+    const char* sql_shift1 = "UPDATE Queues SET Id = Id - 1;";
+    const char* sql_shift2 = "UPDATE Queues SET Position = Position - 1 WHERE Subject_Id = ?;";
 
 
     sqlite3_stmt* stmt;
@@ -74,10 +75,23 @@ FuncResult<bool>Queue::pop(){
     }
     sqlite3_finalize(stmt);
     // Обновление очереди
-    if (sqlite3_prepare_v2(db.get_conn(), sql_shift, -1, &stmt, nullptr) != SQLITE_OK) {
+    
+    if (sqlite3_prepare_v2(db.get_conn(), sql_shift2, -1, &stmt, nullptr) != SQLITE_OK) {
         return {FuncError::PREPARE_FAILED, std::nullopt};
     }
     sqlite3_bind_int(stmt, 1, _Subject_id);
+    if (sqlite3_step(stmt) != SQLITE_DONE){
+        // не выполнился step
+        sqlite3_finalize(stmt);
+        return {FuncError::STEP_FAILED, std::nullopt};
+    }
+    sqlite3_finalize(stmt);
+    
+
+    if (sqlite3_prepare_v2(db.get_conn(), sql_shift1, -1, &stmt, nullptr) != SQLITE_OK) {
+        return {FuncError::PREPARE_FAILED, std::nullopt};
+    }
+        
     int rc = sqlite3_step(stmt);
     sqlite3_finalize(stmt);
     
@@ -236,7 +250,7 @@ FuncResult<std::vector<Student>>Queue::getQueue() const{
 
     // Подготавливаем SQL-запрос
     const char* sql = R"(
-        SELECT Q.Position, Q.Student_Id, S.name 
+        SELECT Q.Position, Q.Student_Id, S.name, S.Groups 
         FROM Queues Q 
         JOIN Students S ON S.Id = Q.Student_Id 
         WHERE Q.Subject_Id = ?
@@ -261,9 +275,11 @@ FuncResult<std::vector<Student>>Queue::getQueue() const{
     // Выполняем шаг за шагом
     while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
         
-        
-        std::optional<const char*> name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
-        student.setName(*name);
+        student.setId(sqlite3_column_int(stmt, 1));
+
+        student.setGroupName((sqlite3_column_int(stmt, 3)));
+
+        student.setName(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2)));
 
         students.push_back(student);
     }
