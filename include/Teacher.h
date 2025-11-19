@@ -1,13 +1,10 @@
 #pragma once
 #include <string>
 #include <vector>
-#include "Database.h"
 #include "Subject.h"
 #include "Error.h"
 
-class Database;
 class Subject;
-
 
 class Teacher {
 private:

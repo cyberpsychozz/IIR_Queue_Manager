@@ -1,13 +1,7 @@
 #pragma once
-#include <string>
 #include <algorithm>
 #include "Subject.h"
-#include "Error.h"
-#include "Database.h"
-#include "Group.h"
 
-class Subject;
-class Database;
 class Student 
 {
 private:

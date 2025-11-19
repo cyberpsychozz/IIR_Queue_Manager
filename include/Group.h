@@ -1,10 +1,7 @@
 #pragma once
 #include "Student.h"
 #include "Subject.h"
-#include "Database.h"
-#include <vector>
 
-class Student;
 class Group
 {
 private:

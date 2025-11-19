@@ -4,9 +4,7 @@
 #include "Database.h"
 #include "Error.h"
 #include <vector>
-#include <string>
 
-class Database;
 class Teacher;
 
 class Subject{

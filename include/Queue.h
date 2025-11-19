@@ -1,8 +1,5 @@
 #pragma once
 #include "Student.h"
-#include "Database.h"
-#include "Error.h"
-#include <vector>
 
 class Queue {
 private:
