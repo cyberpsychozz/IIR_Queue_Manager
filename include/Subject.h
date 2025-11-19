@@ -35,4 +35,7 @@ public:
     FuncResult<std::vector<Seminar>> getClasses(int group) const;
     FuncError addClass(const Seminar& seminar, int group);
     FuncError deleteClass(int sem_id);
+
+    FuncResult<int> addSubject(std::string groups);
+    FuncError deleteSubject();
 };

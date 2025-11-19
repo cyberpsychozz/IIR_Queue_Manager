@@ -1,8 +1,10 @@
 #pragma once
 #include <string>
+#include <algorithm>
 #include "Subject.h"
 #include "Error.h"
 #include "Database.h"
+#include "Group.h"
 
 class Subject;
 class Database;
@@ -36,5 +38,8 @@ public:
 
     // Functions
     FuncResult<std::vector<Subject>> getSubjects() const;
+
+    FuncError addStudent(std::optional<std::string> name);
+    FuncError deleteStudent(std::optional<std::string> name, std::optional<int> student_id);
 
 };

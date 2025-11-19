@@ -64,3 +64,170 @@ FuncResult<std::vector<Subject>> Student::getSubjects() const {
     sqlite3_finalize(stmt);
     return {FuncError::OK, subjects};
 }
+
+/** 
+ * Добавляем или обновляем данные студента
+ * Поиск происходит по имени.
+ *  
+ * Если задан атрибут name, то данные студента будут обновлены на данные из объекта класса
+ * откуда вызывается функция. (Все данные, кроме Id)
+ * 
+ * Иначе студент будет добавлен в конец списка
+ * 
+ * ВАЖНО!!! ОБНОВЛЯЕТ Telegram_Id
+*/
+FuncError Student::addStudent(std::optional<std::string> name) {
+    auto &db = Database::getInstance();
+    sqlite3_stmt* stmt = nullptr;
+
+    if (!db.get_conn()) {
+        return FuncError::CONNECTION_CLOSED;
+    }
+
+    if (name.has_value()) {
+
+        int studentId;
+
+        std::string sql_find = R"(SELECT Id FROM Students
+                               WHERE Name = ?)";
+
+        std::string sql_update = R"(UPDATE Students
+                                 SET (Groups, Name, Login, TG_id) = (?, ?, ?, ?)
+                                 WHERE Id = ?)";
+
+        if (sqlite3_prepare_v2(db.get_conn(), sql_find.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+            return FuncError::PREPARE_FAILED;
+        }
+
+        sqlite3_bind_text(stmt, 1, (*name).c_str(), -1, SQLITE_STATIC);
+
+        auto rc = sqlite3_step(stmt);
+
+        // Вернулась строка
+        if (rc == SQLITE_ROW) {
+            studentId = sqlite3_column_int(stmt, 0);
+            sqlite3_finalize(stmt);
+        } 
+        // Студент не найден
+        else if (rc == SQLITE_DONE) {
+            sqlite3_finalize(stmt);
+            return FuncError::NOT_FOUND;
+        }
+        // Вернулась ошибка 
+        else {
+            sqlite3_finalize(stmt);
+            return FuncError::STEP_FAILED;
+        }
+
+        // Обновление студента
+        if (sqlite3_prepare_v2(db.get_conn(), sql_update.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+            return FuncError::PREPARE_FAILED;
+        }
+
+        sqlite3_bind_int(stmt, 5, studentId);
+    }
+
+    else {
+
+        std::string sql_insert = R"(INSERT INTO Students (Id, Groups, Name, Login, TG_id) 
+                                 VALUES ((SELECT max(Id) from Students) + 1, ?, ?, ?, ?))";
+
+        if (sqlite3_prepare_v2(db.get_conn(), sql_insert.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+            return FuncError::PREPARE_FAILED;
+        }
+    }
+
+    sqlite3_bind_int(stmt, 1, Student::group_name);
+    sqlite3_bind_text(stmt, 2, Student::Name.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 3, Student::login.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 4, Student::username_tg.c_str(), -1, SQLITE_STATIC);
+
+    if (sqlite3_step(stmt) != SQLITE_DONE) {
+        sqlite3_finalize(stmt);
+        return FuncError::STEP_FAILED;
+    }
+
+    sqlite3_finalize(stmt);
+
+    return FuncError::OK;
+}
+
+FuncError Student::deleteStudent(std::optional<std::string> name, std::optional<int> student_id) {
+    auto &db = Database::getInstance();
+    sqlite3_stmt* stmt = nullptr;
+    int id;
+
+    if (!db.get_conn()) {
+        return FuncError::CONNECTION_CLOSED;
+    }
+
+    if (student_id.has_value()) {
+        id = student_id.value();
+    }
+
+    else if (name.has_value()) {
+        std::string sql_find = R"(SELECT Id FROM Students
+                               WHERE Name = ?)";
+
+        if (sqlite3_prepare_v2(db.get_conn(), sql_find.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+            return FuncError::PREPARE_FAILED;
+        }
+
+        sqlite3_bind_text(stmt, 1, (*name).c_str(), -1, SQLITE_STATIC);
+
+        auto rc = sqlite3_step(stmt);
+
+        // Вернулась строка
+        if (rc == SQLITE_ROW) {
+            id = sqlite3_column_int(stmt, 0);
+            sqlite3_finalize(stmt);
+        } 
+        // Студент не найден
+        else if (rc == SQLITE_DONE) {
+            sqlite3_finalize(stmt);
+            return FuncError::NOT_FOUND;
+        }
+        // Вернулась ошибка 
+        else {
+            sqlite3_finalize(stmt);
+            return FuncError::STEP_FAILED;
+        }
+    }
+
+    else {
+        return FuncError::NOT_FOUND;
+    }
+
+    std::string sql_del = "DELETE FROM Students WHERE Id = ?;";
+    std::string sql_shift = "UPDATE Students SET Id = Id - 1 WHERE Id > ?;";
+
+    // Удаление студента
+    if (sqlite3_prepare_v2(db.get_conn(), sql_del.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+        return FuncError::PREPARE_FAILED;
+    }
+
+    sqlite3_bind_int(stmt, 1, id);
+
+    if (sqlite3_step(stmt) != SQLITE_DONE){
+        sqlite3_finalize(stmt);
+        return FuncError::STEP_FAILED;
+    }
+
+    sqlite3_finalize(stmt);
+
+    // Обновление списка
+    if (sqlite3_prepare_v2(db.get_conn(), sql_shift.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+        return FuncError::PREPARE_FAILED;
+    }
+
+    sqlite3_bind_int(stmt, 1, id);
+
+    if (sqlite3_step(stmt) != SQLITE_DONE) {
+        sqlite3_finalize(stmt);
+        return FuncError::STEP_FAILED;
+    }
+
+    sqlite3_finalize(stmt);
+    
+    return FuncError::OK;
+}

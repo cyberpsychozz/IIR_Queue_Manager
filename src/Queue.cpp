@@ -17,7 +17,7 @@ FuncResult<int>Queue::push(int student_id){
     auto& db = Database::getInstance();
 
     if (!db.get_conn()){
-        return{FuncError::DB_NOT_OPEN, std::nullopt};
+        return {FuncError::DB_NOT_OPEN, std::nullopt};
     }
     
     auto LenRes = getLen();

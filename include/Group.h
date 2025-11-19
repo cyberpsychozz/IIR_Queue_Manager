@@ -4,7 +4,8 @@
 #include "Database.h"
 #include <vector>
 
-class Group // TODO Реализовать функции класса
+class Student;
+class Group
 {
 private:
     int group_id;
@@ -17,11 +18,8 @@ public:
     FuncResult<std::vector<Student>> getStudents() const;
     FuncResult<std::vector<Subject>> getSubjects() const;
 
-    void addStudent(int student_id);
-    void deleteStudent(int student_id);
-
-    void addSubject(int student_id);
-    void deleteSubject(int student_id);
+    FuncError addToSubject(std::optional<std::string> name, std::optional<int> subject_id);
+    FuncError deleteFromSubject(std::optional<std::string> name, std::optional<int> subject_id);
 
     // Leaderboard когда-нибудь когда нам будут платить деньги
 

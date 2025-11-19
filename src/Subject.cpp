@@ -152,7 +152,7 @@ FuncError Subject::deleteClass(int sem_id) {
     std::string sql_del = "DELETE FROM " + table_name + " WHERE Id = ?;";
     std::string sql_shift = "UPDATE " + table_name + " SET Id = Id - 1 WHERE Id > ?;";
 
-    sqlite3_stmt* stmt;
+    sqlite3_stmt* stmt = nullptr;
     // Удаление занятия
     if (sqlite3_prepare_v2(db.get_conn(), sql_del.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
         return FuncError::PREPARE_FAILED;
@@ -177,6 +177,132 @@ FuncError Subject::deleteClass(int sem_id) {
 
     if (sqlite3_step(stmt) != SQLITE_DONE) {
         // не выполнился step
+        sqlite3_finalize(stmt);
+        return FuncError::STEP_FAILED;
+    }
+
+    sqlite3_finalize(stmt);
+    
+    return FuncError::OK;
+}
+
+FuncResult<int> Subject::addSubject(std::string groups) {
+    auto &db = Database::getInstance();
+    int subjectId;
+
+    if (!db.get_conn()) {
+        return {FuncError::CONNECTION_CLOSED, std::nullopt};
+    }
+
+    std::string sql = "INSERT INTO Subjects (Id, Name, Teacher_Id, Groups) VALUES ((SELECT max(Id) from Subjects) + 1, ?, ?, ?)";
+
+    sqlite3_stmt* stmt = nullptr;
+
+    if (sqlite3_prepare_v2(db.get_conn(), sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+        return {FuncError::PREPARE_FAILED, std::nullopt};
+    }
+
+    sqlite3_bind_text(stmt, 1, Subject::name.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_int(stmt, 2, Subject::teacher_id);
+    sqlite3_bind_text(stmt, 3, groups.c_str(), -1, SQLITE_STATIC);
+
+    auto rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+    
+    if(rc != SQLITE_DONE){
+        return {FuncError::STEP_FAILED, std::nullopt};
+    }
+
+
+    std::string sql_find = "SELECT max(Id) from Subjects";
+
+    if (sqlite3_prepare_v2(db.get_conn(), sql_find.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+        return {FuncError::PREPARE_FAILED, std::nullopt};
+    }
+
+    rc = sqlite3_step(stmt);
+
+    if (rc == SQLITE_ROW) {
+        subjectId = sqlite3_column_int(stmt, 0);
+        sqlite3_finalize(stmt);
+    } 
+
+    else {
+        sqlite3_finalize(stmt);
+        return {FuncError::STEP_FAILED, std::nullopt};
+    }
+
+    Subject::id = subjectId;
+
+    return {FuncError::OK, subjectId};
+}
+
+FuncError Subject::deleteSubject() {
+    auto &db = Database::getInstance();
+    sqlite3_stmt* stmt = nullptr;
+    int subjectId;
+
+    if (!db.get_conn()) {
+        return FuncError::CONNECTION_CLOSED;
+    }
+
+    if (Subject::id != 0) {
+        subjectId = Subject::id;
+    }
+    else {
+        std::string sql_find = R"(SELECT Id FROM Subjects
+                               WHERE Name = ?)";
+
+        if (sqlite3_prepare_v2(db.get_conn(), sql_find.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+            return FuncError::PREPARE_FAILED;
+        }
+
+        sqlite3_bind_text(stmt, 1, Subject::name.c_str(), -1, SQLITE_STATIC);
+
+        auto rc = sqlite3_step(stmt);
+
+        // Вернулась строка
+        if (rc == SQLITE_ROW) {
+            id = sqlite3_column_int(stmt, 0);
+            sqlite3_finalize(stmt);
+        } 
+        // Предмет не найден
+        else if (rc == SQLITE_DONE) {
+            sqlite3_finalize(stmt);
+            return FuncError::NOT_FOUND;
+        }
+        // Вернулась ошибка 
+        else {
+            sqlite3_finalize(stmt);
+            return FuncError::STEP_FAILED;
+        }
+    }
+
+    std::string sql_del = "DELETE FROM Subjects WHERE Id = ?;";
+    std::string sql_shift = "UPDATE Subjects SET Id = Id - 1 WHERE Id > ?;";
+
+    // Удаление предмета
+    if (sqlite3_prepare_v2(db.get_conn(), sql_del.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+        return FuncError::PREPARE_FAILED;
+    }
+
+    sqlite3_bind_int(stmt, 1, subjectId);
+
+    if (sqlite3_step(stmt) != SQLITE_DONE){
+        sqlite3_finalize(stmt);
+        return FuncError::STEP_FAILED;
+    }
+
+    sqlite3_finalize(stmt);
+
+    // Обновление очереди
+    if (sqlite3_prepare_v2(db.get_conn(), sql_shift.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+        return FuncError::PREPARE_FAILED;
+    }
+
+    sqlite3_bind_int(stmt, 1, subjectId);
+
+    if (sqlite3_step(stmt) != SQLITE_DONE) {
         sqlite3_finalize(stmt);
         return FuncError::STEP_FAILED;
     }

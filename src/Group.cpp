@@ -59,7 +59,7 @@ FuncResult<std::vector<Student>> Group::getStudents() const {
     return {FuncError::OK, students};
 }
 
-FuncResult<std::vector<Subject>> Group::getSubjects() const { // FIXME Дублирует функцию студента
+FuncResult<std::vector<Subject>> Group::getSubjects() const {
     auto &db = Database::getInstance();
     
     if (!db.get_conn()) {
@@ -104,4 +104,159 @@ FuncResult<std::vector<Subject>> Group::getSubjects() const { // FIXME Дубл�
 
     sqlite3_finalize(stmt);
     return {FuncError::OK, subjects};
+}
+
+FuncError Group::addToSubject(std::optional<std::string> name, std::optional<int> subject_id) {
+    auto &db = Database::getInstance();
+    sqlite3_stmt* stmt = nullptr;
+    int id;
+
+    if (!db.get_conn()) {
+        return FuncError::CONNECTION_CLOSED;
+    }
+
+    if (subject_id.has_value()) {
+        id = subject_id.value();
+    }
+
+    else if (name.has_value()) {
+        std::string sql_find = R"(SELECT Id FROM Subjects
+                               WHERE Name = ?)";
+
+        if (sqlite3_prepare_v2(db.get_conn(), sql_find.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+            return FuncError::PREPARE_FAILED;
+        }
+
+        sqlite3_bind_text(stmt, 1, (*name).c_str(), -1, SQLITE_STATIC);
+
+        auto rc = sqlite3_step(stmt);
+
+        // Вернулась строка
+        if (rc == SQLITE_ROW) {
+            id = sqlite3_column_int(stmt, 0);
+            sqlite3_finalize(stmt);
+        } 
+        // Студент не найден
+        else if (rc == SQLITE_DONE) {
+            sqlite3_finalize(stmt);
+            return FuncError::NOT_FOUND;
+        }
+        // Вернулась ошибка 
+        else {
+            sqlite3_finalize(stmt);
+            return FuncError::STEP_FAILED;
+        }
+    }
+
+    else {
+        return FuncError::NOT_FOUND;
+    }
+
+    std::string sql_update = R"(UPDATE Subjects
+                                SET Groups = Groups || ?
+                                WHERE Id = ?;)";
+
+    // Удаление студента
+    if (sqlite3_prepare_v2(db.get_conn(), sql_update.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+        return FuncError::PREPARE_FAILED;
+    }
+
+    std::string group = ", " + std::to_string(Group::group_id);
+    sqlite3_bind_text(stmt, 1, group.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_int(stmt, 2, id);
+
+    if (sqlite3_step(stmt) != SQLITE_DONE){
+        sqlite3_finalize(stmt);
+        return FuncError::STEP_FAILED;
+    }
+
+    sqlite3_finalize(stmt);
+    
+    return FuncError::OK;
+}
+
+FuncError Group::deleteFromSubject(std::optional<std::string> name, std::optional<int> subject_id) {
+    auto &db = Database::getInstance();
+    sqlite3_stmt* stmt = nullptr;
+    int id;
+
+    if (!db.get_conn()) {
+        return FuncError::CONNECTION_CLOSED;
+    }
+
+    if (subject_id.has_value()) {
+        id = subject_id.value();
+    }
+
+    else if (name.has_value()) {
+        std::string sql_find = R"(SELECT Id FROM Subjects
+                               WHERE Name = ?)";
+
+        if (sqlite3_prepare_v2(db.get_conn(), sql_find.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+            return FuncError::PREPARE_FAILED;
+        }
+
+        sqlite3_bind_text(stmt, 1, (*name).c_str(), -1, SQLITE_STATIC);
+
+        auto rc = sqlite3_step(stmt);
+
+        // Вернулась строка
+        if (rc == SQLITE_ROW) {
+            id = sqlite3_column_int(stmt, 0);
+            sqlite3_finalize(stmt);
+        } 
+        // Группа не найден
+        else if (rc == SQLITE_DONE) {
+            sqlite3_finalize(stmt);
+            return FuncError::NOT_FOUND;
+        }
+        // Вернулась ошибка 
+        else {
+            sqlite3_finalize(stmt);
+            return FuncError::STEP_FAILED;
+        }
+    }
+
+    else {
+        return FuncError::NOT_FOUND;
+    }
+
+    std::string sql_update = R"(UPDATE Subjects
+                                SET Groups = replace(Groups, ?, "")
+                                WHERE Id = ?;)";
+
+    if (sqlite3_prepare_v2(db.get_conn(), sql_update.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+        return FuncError::PREPARE_FAILED;
+    }
+
+    std::string group = std::to_string(Group::group_id);
+    sqlite3_bind_text(stmt, 1, (group + ", ").c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_int(stmt, 2, id);
+
+    if (sqlite3_step(stmt) != SQLITE_DONE){
+        sqlite3_finalize(stmt);
+        return FuncError::STEP_FAILED;
+    }
+
+    sqlite3_finalize(stmt);
+
+    std::string sql_update2 = R"(UPDATE Subjects
+                                SET Groups = replace(Groups, ?, "")
+                                WHERE Id = ?;)";
+
+    if (sqlite3_prepare_v2(db.get_conn(), sql_update2.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+        return FuncError::PREPARE_FAILED;
+    }
+
+    sqlite3_bind_text(stmt, 1, group.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_int(stmt, 2, id);
+
+    if (sqlite3_step(stmt) != SQLITE_DONE){
+        sqlite3_finalize(stmt);
+        return FuncError::STEP_FAILED;
+    }
+
+    sqlite3_finalize(stmt);
+    
+    return FuncError::OK;
 }
