@@ -6,21 +6,26 @@ Subject::Subject(int subject_id, std::string name, int teacher_id)
     : id(subject_id), name(name), teacher_id(teacher_id) {}
 
 // Getters
+
 int Subject::getId() const { return id; }
 int Subject::getTeacherId() const { return teacher_id; }
 const std::string& Subject::getName() const { return name; }
 
 // Setters
+
 void Subject::setId(int newId) { id = newId; }
 void Subject::setTeacherId(int newTeacherId) { teacher_id = newTeacherId; }
 void Subject::setName(const std::string& newName) { name = newName; }
 
+// Functions
+
+// Возвращает данные преподавателя данного предмета
 FuncResult<Teacher> Subject::getTeacher() const {
     auto &db = Database::getInstance();
 
     // Проверяем, что соединение открыто
     if (!db.get_conn()) {
-        return {FuncError::CONNECTION_CLOSED, std::nullopt};
+        return {FuncError::DB_NOT_OPEN, std::nullopt};
     }
 
     // SQLite запрос
@@ -70,11 +75,12 @@ FuncResult<Teacher> Subject::getTeacher() const {
     return {FuncError::OK, prepod};
 }
 
+// Возвращает список назначенных заданной группе семинаров по предмету
 FuncResult<std::vector<Seminar>> Subject::getClasses(int group) const {
     auto &db = Database::getInstance();
 
     if (!db.get_conn()) {
-        return {FuncError::CONNECTION_CLOSED, std::nullopt};
+        return {FuncError::DB_NOT_OPEN, std::nullopt};
     }
 
     std::string table_name = "Sems_" + std::to_string(Subject::id);
@@ -114,11 +120,12 @@ FuncResult<std::vector<Seminar>> Subject::getClasses(int group) const {
     return {FuncError::OK, sems};
 }
 
+// Добавляет семинар по предмету в расписание заданной группы
 FuncError Subject::addClass(const Seminar& seminar, int group) {
     auto &db = Database::getInstance();
 
     if (!db.get_conn()) {
-        return FuncError::CONNECTION_CLOSED;
+        return FuncError::DB_NOT_OPEN;
     }
 
     std::string table_name = "Sems_" + std::to_string(Subject::id);
@@ -141,11 +148,12 @@ FuncError Subject::addClass(const Seminar& seminar, int group) {
     return FuncError::OK;
 }
 
+// Удаляет семинар из расписания предмета по его id
 FuncError Subject::deleteClass(int sem_id) {
     auto &db = Database::getInstance();
 
     if (!db.get_conn()) {
-        return FuncError::CONNECTION_CLOSED;
+        return FuncError::DB_NOT_OPEN;
     }
 
     std::string table_name = "Sems_" + std::to_string(Subject::id);
@@ -186,12 +194,13 @@ FuncError Subject::deleteClass(int sem_id) {
     return FuncError::OK;
 }
 
+// Добавляет данный предмет в таблицу заданным группам
 FuncResult<int> Subject::addSubject(std::string groups) {
     auto &db = Database::getInstance();
     int subjectId;
 
     if (!db.get_conn()) {
-        return {FuncError::CONNECTION_CLOSED, std::nullopt};
+        return {FuncError::DB_NOT_OPEN, std::nullopt};
     }
 
     std::string sql = "INSERT INTO Subjects (Id, Name, Teacher_Id, Groups) VALUES ((SELECT max(Id) from Subjects) + 1, ?, ?, ?)";
@@ -237,13 +246,14 @@ FuncResult<int> Subject::addSubject(std::string groups) {
     return {FuncError::OK, subjectId};
 }
 
+// Удаляет предмет из таблицы
 FuncError Subject::deleteSubject() {
     auto &db = Database::getInstance();
     sqlite3_stmt* stmt = nullptr;
     int subjectId;
 
     if (!db.get_conn()) {
-        return FuncError::CONNECTION_CLOSED;
+        return FuncError::DB_NOT_OPEN;
     }
 
     if (Subject::id != 0) {

@@ -12,6 +12,7 @@ public:
     Group(int groupId);
 
     // Functions
+    
     FuncResult<std::vector<Student>> getStudents() const;
     FuncResult<std::vector<Subject>> getSubjects() const;
 

@@ -4,11 +4,16 @@
 Group::Group(int groupId) : group_id(groupId) {}
 
 // Functions
+
+/*
+Возвращает список студентов группы
+Производит поиск по id группы
+*/
 FuncResult<std::vector<Student>> Group::getStudents() const {
     auto &db = Database::getInstance();
 
     if (!db.get_conn()) {
-        return {FuncError::CONNECTION_CLOSED, std::nullopt};
+        return {FuncError::DB_NOT_OPEN, std::nullopt};
     }
 
     const char* sql = R"(
@@ -59,11 +64,13 @@ FuncResult<std::vector<Student>> Group::getStudents() const {
     return {FuncError::OK, students};
 }
 
+
+//Возвращает список предметов соответствующий id группы
 FuncResult<std::vector<Subject>> Group::getSubjects() const {
     auto &db = Database::getInstance();
     
     if (!db.get_conn()) {
-        return {FuncError::CONNECTION_CLOSED, std::nullopt};
+        return {FuncError::DB_NOT_OPEN, std::nullopt};
     }
 
     const char* sql = R"(
@@ -106,13 +113,19 @@ FuncResult<std::vector<Subject>> Group::getSubjects() const {
     return {FuncError::OK, subjects};
 }
 
+/*
+Приписывает группу к СУЩЕСТВУЮЩЕМУ предмету
+Если задан аргумент subject_id производится добавление по id предмета (рекомендуется)
+Если задан name - сначала поиск id предмета по названию, а затем добавление к первому найденному предмету
+Если предмет отсутствует в списке или не задан ни один из аргументов, возвращается NOT FOUND
+*/
 FuncError Group::addToSubject(std::optional<std::string> name, std::optional<int> subject_id) {
     auto &db = Database::getInstance();
     sqlite3_stmt* stmt = nullptr;
     int id;
 
     if (!db.get_conn()) {
-        return FuncError::CONNECTION_CLOSED;
+        return FuncError::DB_NOT_OPEN;
     }
 
     if (subject_id.has_value()) {
@@ -136,7 +149,7 @@ FuncError Group::addToSubject(std::optional<std::string> name, std::optional<int
             id = sqlite3_column_int(stmt, 0);
             sqlite3_finalize(stmt);
         } 
-        // Студент не найден
+        // Предмет не найден
         else if (rc == SQLITE_DONE) {
             sqlite3_finalize(stmt);
             return FuncError::NOT_FOUND;
@@ -156,7 +169,6 @@ FuncError Group::addToSubject(std::optional<std::string> name, std::optional<int
                                 SET Groups = Groups || ?
                                 WHERE Id = ?;)";
 
-    // Удаление студента
     if (sqlite3_prepare_v2(db.get_conn(), sql_update.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
         return FuncError::PREPARE_FAILED;
     }
@@ -175,13 +187,19 @@ FuncError Group::addToSubject(std::optional<std::string> name, std::optional<int
     return FuncError::OK;
 }
 
+/*
+Удаляет группу из списка групп СУЩЕСТВУЮЩЕГО предмета
+Если задан аргумент subject_id производится удаление по id предмета (рекомендуется)
+Если задан name - сначала поиск id предмета по названию, а затем удаление у первого найденного предмета
+Если предмет отсутствует в списке или не задан ни один из аргументов, возвращается NOT FOUND
+*/
 FuncError Group::deleteFromSubject(std::optional<std::string> name, std::optional<int> subject_id) {
     auto &db = Database::getInstance();
     sqlite3_stmt* stmt = nullptr;
     int id;
 
     if (!db.get_conn()) {
-        return FuncError::CONNECTION_CLOSED;
+        return FuncError::DB_NOT_OPEN;
     }
 
     if (subject_id.has_value()) {

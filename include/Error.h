@@ -1,20 +1,20 @@
 #pragma once
 #include <optional>
 
-enum class FuncError { // TODO Надо в нормальный вид этот файл привести
-    OK,
-    DB_NOT_OPEN,
-    PREPARE_FAILED,
-    BIND_FAILED,
-    STEP_FAILED,
-    NOT_FOUND,
-    INVALID_POSITION,
-    STUDENT_NOT_IN_QUEUE,
-    UNKNOWN,
-    CONNECTION_CLOSED
+// Класс ошибок функций
+enum class FuncError {
+    OK,                 ///< Функция завершилась нормально
+    DB_NOT_OPEN,        ///< База данных закрыта
+    PREPARE_FAILED,     ///< Подготовка sql-запроса завершилась некорректно
+    BIND_FAILED,        ///< bind значения в запрос завершился некорректно
+    STEP_FAILED,        ///< Активация запроса завершилась некорректно
+    NOT_FOUND,          ///< Элемент не найден
+    INVALID_POSITION,   ///< Позиции в queue.swap() некорректны
+    UNKNOWN             ///< Неизвестная ошибка
 };
 
 template<typename T>
+// Результат функции - пара FuncError и возвращаемого значения
 using FuncResult = std::pair<FuncError, std::optional<T>>;
 
 template<typename T>

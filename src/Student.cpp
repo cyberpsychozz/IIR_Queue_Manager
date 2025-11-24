@@ -4,6 +4,7 @@
 Student::Student() : id(0), group_name(0), Name(""), login(""), username_tg("") {}
 
 // Getters
+
 int Student::getId() const { return id; }
 int Student::getGroupName() const { return group_name; }
 const std::string& Student::getName() const { return Name; }
@@ -11,6 +12,7 @@ const std::string& Student::getLogin() const { return login; }
 const std::string& Student::getUsernameTg() const { return username_tg; }
 
 // Setters
+
 void Student::setId(int newId) { id = newId; }
 void Student::setGroupName(int newGroupName) { group_name = newGroupName; }
 void Student::setName(const std::string& newName) { Name = newName; }
@@ -18,11 +20,13 @@ void Student::setLogin(const std::string& newLogin) { login = newLogin; }
 void Student::setUsernameTg(const std::string& newUsernameTg) { username_tg = newUsernameTg; }
 
 // Functions
+
+// Возвращает список предметов, преподаваемых данной группе
 FuncResult<std::vector<Subject>> Student::getSubjects() const {
     auto &db = Database::getInstance();
 
     if (!db.get_conn()) {
-        return {FuncError::CONNECTION_CLOSED, std::nullopt};
+        return {FuncError::DB_NOT_OPEN, std::nullopt};
     }
 
     const char* sql = R"(
@@ -81,7 +85,7 @@ FuncError Student::addStudent(std::optional<std::string> name) {
     sqlite3_stmt* stmt = nullptr;
 
     if (!db.get_conn()) {
-        return FuncError::CONNECTION_CLOSED;
+        return FuncError::DB_NOT_OPEN;
     }
 
     if (name.has_value()) {
@@ -152,13 +156,23 @@ FuncError Student::addStudent(std::optional<std::string> name) {
     return FuncError::OK;
 }
 
+/** 
+ * Удаляет студента из списка
+ * Поиск происходит по id.
+ *  
+ * Рекомендуется напрямую задавать id, но при необходимости можно  использовать и ФИО студента.
+ * 
+ * Если не задан атрибут id, то он будет определён по имени.
+ * Если такого студента не существует или
+ * name так же не задан, то функция возвращает NOT_FOUND
+*/
 FuncError Student::deleteStudent(std::optional<std::string> name, std::optional<int> student_id) {
     auto &db = Database::getInstance();
     sqlite3_stmt* stmt = nullptr;
     int id;
 
     if (!db.get_conn()) {
-        return FuncError::CONNECTION_CLOSED;
+        return FuncError::DB_NOT_OPEN;
     }
 
     if (student_id.has_value()) {

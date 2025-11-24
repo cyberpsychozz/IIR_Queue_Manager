@@ -1,6 +1,7 @@
 #include "Teacher.h"
 
 // Constructors
+
 Teacher::Teacher(int teacherId, const std::string& teacherName, 
         const std::string& teacherLogin, const std::string& teacherUsernameTg)
     : id(teacherId), name(teacherName), login(teacherLogin), username_tg(teacherUsernameTg) {}
@@ -10,23 +11,27 @@ Teacher::Teacher() : Teacher(0, "", "", "") {}
 Teacher::~Teacher() = default;
 
 // Getters
+
 int Teacher::getId() const { return id; }
 const std::string& Teacher::getName() const { return name; }
 const std::string& Teacher::getLogin() const { return login; }
 const std::string& Teacher::getUsernameTg() const { return username_tg; }
 
 //Setters
+
 void Teacher::setId(int newId) { id = newId; }
 void Teacher::setName(const std::string& newName) { name = newName; }
 void Teacher::setLogin(const std::string& newLogin) { login = newLogin; }
 void Teacher::setUsernameTg(const std::string& newUsernameTg) { username_tg = newUsernameTg; }
 
 // Functions
+
+// Возвращает расписание семинаров преподавателя
 FuncResult<std::vector<Subject>> Teacher::getSubjects() const {
     auto &db = Database::getInstance();
 
     if (!db.get_conn()) {
-        return {FuncError::CONNECTION_CLOSED, std::nullopt};
+        return {FuncError::DB_NOT_OPEN, std::nullopt};
     }
 
     const char* sql = R"(

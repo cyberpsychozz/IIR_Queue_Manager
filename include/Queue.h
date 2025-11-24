@@ -11,11 +11,12 @@ public:
     Queue(int subject_id);
 
     // Functions
+
     FuncResult<int> push(int student_id);
-    FuncResult<bool> pop();
-    FuncResult<bool> swap(int pos1, int pos2);
-    FuncResult<bool> skip();
-    FuncResult<bool> give_up(int student_id);
+    FuncError pop();
+    FuncError swap(int pos1, int pos2);
+    FuncError skip();
+    FuncError give_up(int student_id);
 
     FuncResult<int> getPosition(int student_id) const;
     FuncResult<int> getLen() const;

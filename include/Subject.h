@@ -15,20 +15,24 @@ private:
 
 public:
     // Constructors
+
     Subject();
     Subject(int subject_id, std::string name, int teacher_id);
 
     // Getters
+
     int getId() const;
     int getTeacherId() const;
     const std::string& getName() const;
 
     // Setters
+
     void setId(int newId);
     void setTeacherId(int newTeacherId);
     void setName(const std::string& newName);
 
     // Functions
+    
     FuncResult<Teacher> getTeacher() const;
     FuncResult<std::vector<Seminar>> getClasses(int group) const;
     FuncError addClass(const Seminar& seminar, int group);

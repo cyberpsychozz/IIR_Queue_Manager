@@ -7,12 +7,19 @@ Database::~Database() {
     close();
 }
 
+/*
+Возвращает единственный существующий экземпляр singleton-объекта database
+*/
 Database& Database::getInstance(const std::string& db_path) {
     // Статический локальный объект — создаётся один раз
     static Database instance(db_path);
     return instance;
 }
 
+/*
+Открывает базу данных и позволяет с ней работать
+Используется в паре с database.close()
+*/
 bool Database::open() {
     if (conn) return true; // Уже открыта
 
@@ -26,6 +33,7 @@ bool Database::open() {
     return true;
 }
 
+// Закрывает базу данных
 void Database::close() {
     if (conn) {
         sqlite3_close(conn);

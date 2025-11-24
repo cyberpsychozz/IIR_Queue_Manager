@@ -17,6 +17,7 @@ public:
     Student();
 
     // Getters
+
     int getId() const;
     int getGroupName() const;
     const std::string& getName() const;
@@ -24,6 +25,7 @@ public:
     const std::string& getUsernameTg() const;
 
     // Setters
+
     void setId(int newId);
     void setGroupName(int newGroupName);
     void setName(const std::string& newName);
@@ -31,6 +33,7 @@ public:
     void setUsernameTg(const std::string& newUsernameTg);
 
     // Functions
+    
     FuncResult<std::vector<Subject>> getSubjects() const;
 
     FuncError addStudent(std::optional<std::string> name);
