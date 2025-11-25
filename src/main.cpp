@@ -5,105 +5,135 @@
 #include "Subject.h"
 #include <vector>
 #include <iostream>
-
+#include <tgbot/tgbot.h>
 
 int main() {
-    std::cout << "penis" << std::endl;
-    auto& db = Database::getInstance("../data/test.db");
-    db.open();
-    std::cout << "penis2" << std::endl;
-    Subject subj(1, "ООП", 1);
-    Queue queue(1);
+
+        const char* token = std::getenv("BOT_TOKEN");
+        if (!token) {
+                std::cerr << "ОШИБКА: переменная BOT_TOKEN не установлена!\n";
+                return 1;
+        }
+
+        TgBot::Bot bot(token);
+        bot.getEvents().onCommand("start", [&bot](TgBot::Message::Ptr message) {
+                bot.getApi().sendMessage(message->chat->id, "Hi!");
+        });
+        bot.getEvents().onAnyMessage([&bot](TgBot::Message::Ptr message) {
+                printf("User wrote %s\n", message->text.c_str());
+                if (StringTools::startsWith(message->text, "/start")) {
+                return;
+                }
+                bot.getApi().sendMessage(message->chat->id, "Your message is: " + message->text);
+        });
+        try {
+                printf("Bot username: %s\n", bot.getApi().getMe()->username.c_str());
+                TgBot::TgLongPoll longPoll(bot);
+                while (true) {
+                printf("Long poll started\n");
+                longPoll.start();
+                }
+        } catch (TgBot::TgException& e) {
+                printf("error: %s\n", e.what());
+        }
+        return 0;
+
+//     std::cout << "penis" << std::endl;
+//     auto& db = Database::getInstance("../data/test.db");
+//     db.open();
+//     std::cout << "penis2" << std::endl;
+//     Subject subj(1, "ООП", 1);
+//     Queue queue(1);
  
-    // FuncResult<Teacher> res = subj.getTeacher(db);
-    // if (res.second) {
-    //     std::cout << (*res.second).getName() << std::endl;
-    // }
-    // else {
-    //     printf("%s\n", res.first);
-    // }
+//     // FuncResult<Teacher> res = subj.getaTeacher(db);
+//     // if (res.second) {
+//     //     std::cout << (*res.second).getName() << std::endl;
+//     // }
+//     // else {
+//     //     printf("%s\n", res.first);
+//     // }
 
 
-    // FuncResult<std::vector<Seminar>> res2 = subj.getClasses(db, 24940);
+//     // FuncResult<std::vector<Seminar>> res2 = subj.getClasses(db, 24940);
 
-    // if (res2.second) {
-    //     for (auto v : (*res2.second)) {
-    //         std::cout << v.id << "   " << v.date << "   " << v.comment <<std::endl;
-    //     }
-    // }
-    // else {
-    //     // printf("%s\n", res2.first);
-    //     // Напечатать ошибку
-    // }
+//     // if (res2.second) {
+//     //     for (auto v : (*res2.second)) {
+//     //         std::cout << v.id << "   " << v.date << "   " << v.comment <<std::endl;
+//     //     }
+//     // }
+//     // else {
+//     //     // printf("%s\n", res2.first);
+//     //     // Напечатать ошибку
+//     // }
 
-    FuncResult<std::vector<Student>> q= queue.getQueue();
-    for (auto v : (*q.second)) {
-            std::cout << v.getId() << " " << v.getName() << " " << v.getGroupName() <<std::endl;
-    }
+//     FuncResult<std::vector<Student>> q= queue.getQueue();
+//     for (auto v : (*q.second)) {
+//             std::cout << v.getId() << " " << v.getName() << " " << v.getGroupName() <<std::endl;
+//     }
 
-    std::cout << "\npush\n"<<std::endl;
-    queue.push(1);
-    queue.push(2);
-    queue.push(3);
-    queue.push(4);
+//     std::cout << "\npush\n"<<std::endl;
+//     queue.push(1);
+//     queue.push(2);
+//     queue.push(3);
+//     queue.push(4);
     
-    q= queue.getQueue();
-    for (auto v : (*q.second)) {
-            std::cout << v.getId() << " " << v.getName() << " " << v.getGroupName() <<std::endl;
-    }
+//     q= queue.getQueue();
+//     for (auto v : (*q.second)) {
+//             std::cout << v.getId() << " " << v.getName() << " " << v.getGroupName() <<std::endl;
+//     }
 
-    std::cout << "\n penis\n" << std::endl; 
-    queue.pop();
-    std::cout << "\n penis\n" << std::endl;
+//     std::cout << "\n penis\n" << std::endl; 
+//     queue.pop();
+//     std::cout << "\n penis\n" << std::endl;
 
-    q = queue.getQueue();
-    for (auto v : (*q.second)) {
-            std::cout << v.getId() << " " << v.getName() << " " << v.getGroupName() <<std::endl;
-    }
+//     q = queue.getQueue();
+//     for (auto v : (*q.second)) {
+//             std::cout << v.getId() << " " << v.getName() << " " << v.getGroupName() <<std::endl;
+//     }
 
-    // q = queue.getQueue();
+//     // q = queue.getQueue();
 
-    // for (auto v : (*q.second)) {
-    //         std::cout << v.getName() << v.getGroupName() <<std::endl;
-    // }
+//     // for (auto v : (*q.second)) {
+//     //         std::cout << v.getName() << v.getGroupName() <<std::endl;
+//     // }
 
-    // std::cout << "\npop\n"<<std::endl;
+//     // std::cout << "\npop\n"<<std::endl;
     
-    // queue.pop();
+//     // queue.pop();
 
-    // auto res = queue.swap(1, 3);
-    // if (res.first != FuncError::OK) {
-    //     std::cerr << "Swap failed: " << static_cast<int>(res.first) << std::endl;
-    // } else {
-    //     std::cout << "Swap OK\n";
-    // }
+//     // auto res = queue.swap(1, 3);
+//     // if (res.first != FuncError::OK) {
+//     //     std::cerr << "Swap failed: " << static_cast<int>(res.first) << std::endl;
+//     // } else {
+//     //     std::cout << "Swap OK\n";
+//     // }
 
     
 
 
-    // std::cout << "\nskip\n"<<std::endl;
+//     // std::cout << "\nskip\n"<<std::endl;
     
-    // queue.skip();
+//     // queue.skip();
 
-    // q = queue.getQueue();
+//     // q = queue.getQueue();
 
-    // for (auto v : (*q.second)) {
-    //         std::cout << v.getName() << v.getGroupName() <<std::endl;
-    // }
+//     // for (auto v : (*q.second)) {
+//     //         std::cout << v.getName() << v.getGroupName() <<std::endl;
+//     // }
 
-    // std::cout << "\ngive up\n"<<std::endl;
+//     // std::cout << "\ngive up\n"<<std::endl;
     
-    // queue.give_up(3);
+//     // queue.give_up(3);
 
-    // q = queue.getQueue();
+//     // q = queue.getQueue();
 
-    // for (auto v : (*q.second)) {
-    //         std::cout << v.getName() << v.getGroupName() <<std::endl;
-    // }
+//     // for (auto v : (*q.second)) {
+//     //         std::cout << v.getName() << v.getGroupName() <<std::endl;
+//     // }
 
-    // queue.pop();
-    // queue.pop();
-    // queue.pop();
+//     // queue.pop();
+//     // queue.pop();
+//     // queue.pop();
     
-    // TODO Тесты всех функций
+//     // TODO Тесты всех функций
 }

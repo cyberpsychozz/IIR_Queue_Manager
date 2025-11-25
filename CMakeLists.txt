@@ -16,9 +16,6 @@ file(GLOB SOURCES
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-target_link_libraries(${PROJECT_NAME} PRIVATE
-    pthread
-    dl
-)
+target_link_libraries(${PROJECT_NAME} TgBot ssl crypto pthread curl sqlite3)
 
 set_source_files_properties(${CMAKE_SOURCE_DIR}/libs/sqlite-autoconf-3500400/sqlite3.c PROPERTIES LANGUAGE C)
