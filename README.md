@@ -12,3 +12,13 @@
     cmake ..
     make
 ``` 
+
+# Сборка Docker-контейнера
+```
+docker build -t iir-queue-bot .
+```
+
+# Запуск контейнера
+```
+docker run --rm -e BOT_TOKEN="8271031556:AAEnbmv-r2nN78h84EwUKmzq91dRBUNnSek" iir-queue-bot
+```
