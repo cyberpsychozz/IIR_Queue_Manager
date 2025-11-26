@@ -1,35 +1,97 @@
+#include <TG_Bot.h>
 
-// #include <stdio.h>
-// #include <tgbot/tgbot.h>
+FuncResult <Student> studentByTGID (const std::string& TG_id) {
+    auto &db = Database::getInstance();
 
-// int main() {
+    if (!db.get_conn()) {
+        return {FuncError::DB_NOT_OPEN, std::nullopt};
+    }
 
-//      const char* token = std::getenv("BOT_TOKEN");
-//     if (!token) {
-//         std::cerr << "ОШИБКА: переменная BOT_TOKEN не установлена!\n";
-//         return 1;
-//     }
+    const char* sql = R"(
+        SELECT Id, Groups, Name, Login FROM Students
+        WHERE TG_id = ?
+    )";
 
-//     TgBot::Bot bot(token);
-//     bot.getEvents().onCommand("start", [&bot](TgBot::Message::Ptr message) {
-//         bot.getApi().sendMessage(message->chat->id, "Hi!");
-//     });
-//     bot.getEvents().onAnyMessage([&bot](TgBot::Message::Ptr message) {
-//         printf("User wrote %s\n", message->text.c_str());
-//         if (StringTools::startsWith(message->text, "/start")) {
-//             return;
-//         }
-//         bot.getApi().sendMessage(message->chat->id, "Your message is: " + message->text);
-//     });
-//     try {
-//         printf("Bot username: %s\n", bot.getApi().getMe()->username.c_str());
-//         TgBot::TgLongPoll longPoll(bot);
-//         while (true) {
-//             printf("Long poll started\n");
-//             longPoll.start();
-//         }
-//     } catch (TgBot::TgException& e) {
-//         printf("error: %s\n", e.what());
-//     }
-//     return 0;
-// }
+    sqlite3_stmt* stmt = nullptr;
+    auto rc = sqlite3_prepare_v2(db.get_conn(), sql, -1, &stmt, nullptr);
+
+    sqlite3_bind_text(stmt, 1, TG_id.c_str(), -1, SQLITE_STATIC);
+
+    Student student;
+
+    rc = sqlite3_step(stmt);
+    
+    if (rc == SQLITE_ROW) {
+        int studentId = sqlite3_column_int(stmt, 0);
+        int group = sqlite3_column_int(stmt, 1);
+        const unsigned char* name = sqlite3_column_text(stmt, 2);
+        const unsigned char* login = sqlite3_column_text(stmt, 3);
+        
+        student.setId(studentId);
+        student.setGroupName(group);
+        student.setName(std::string(reinterpret_cast<const char*>(name)));
+        student.setLogin(std::string(reinterpret_cast<const char*>(login)));
+        student.setUsernameTg(TG_id);
+    } 
+
+    else if (rc == SQLITE_DONE) {
+        sqlite3_finalize(stmt);
+        return {FuncError::NOT_FOUND, std::nullopt};
+    }
+
+    else {
+        sqlite3_finalize(stmt);
+        return {FuncError::STEP_FAILED, std::nullopt};
+    }
+    
+    sqlite3_finalize(stmt);
+
+    return {FuncError::OK, student};
+}
+
+FuncResult <std::vector<Subject>> getSubjects(int group_id) {
+   auto &db = Database::getInstance();
+    
+    if (!db.get_conn()) {
+        return {FuncError::DB_NOT_OPEN, std::nullopt};
+    }
+
+    const char* sql = R"(
+        SELECT Id, Name, Teacher_Id
+        FROM Subjects
+        WHERE instr(Groups, ?) > 0;
+    )";
+
+    sqlite3_stmt* stmt = nullptr;
+    auto rc = sqlite3_prepare_v2(db.get_conn(), sql, -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        sqlite3_finalize(stmt);
+        return {FuncError::PREPARE_FAILED, std::nullopt};
+    }
+
+    sqlite3_bind_int(stmt, 1, group_id);
+
+    std::vector<Subject> subjects;
+    Subject subj;
+    int id = 1;
+    
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+
+        subj.setId(id);
+        subj.setTeacherId(sqlite3_column_int(stmt, 2));
+
+        const char* name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+        subj.setName(std::string(reinterpret_cast<const char*>(name)));
+        
+        subjects.push_back(subj);
+        ++id;
+    }
+
+    if (rc != SQLITE_DONE) {
+        sqlite3_finalize(stmt);
+        return {FuncError::STEP_FAILED, std::nullopt};
+    }
+
+    sqlite3_finalize(stmt);
+    return {FuncError::OK, subjects};
+}

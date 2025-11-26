@@ -1,168 +1,120 @@
 #include "Queue.h"
-#include "Database.h"
 #include "Group.h"
-#include "Student.h"
-#include "Subject.h"
-#include <vector>
 #include <iostream>
+#include <TG_Bot.h>
 #include <tgbot/tgbot.h>
 
 volatile std::sig_atomic_t gSignalStatus = 0;
 void signal_handler(int signal) { gSignalStatus = signal; }
 
 int main() {
-        const char* token = std::getenv("BOT_TOKEN");
-        if (!token) {
-                std::cerr << "ОШИБКА: переменная BOT_TOKEN не установлена!\n";
-                return 1;
+    const char* token = std::getenv("BOT_TOKEN");
+    if (!token) {
+        std::cerr << "ОШИБКА: переменная BOT_TOKEN не установлена!\n";
+        return 1;
+    }
+
+    TgBot::Bot bot(token);
+
+    auto& db = Database::getInstance("/app/data/test.db");
+    if (!db.open()) return 1;
+    
+
+    bot.getEvents().onCommand("start", [&bot](TgBot::Message::Ptr message) {
+        bot.getApi().sendMessage(message->chat->id, 
+            "Привет! Я бот очередей ИИР.\n\n"
+            "Кто вы?\n"
+            "/student - Студент\n"
+            "/teacher - Преподаватель\n");
+    });
+
+    bot.getEvents().onCommand("student", [&bot](TgBot::Message::Ptr message) {
+        std::string tgId = std::to_string(message->from->id);
+        auto res = studentByTGID(tgId);
+
+        if (res.first != FuncError::OK) {
+            bot.getApi().sendMessage(message->chat->id, "Вас нет в списке студентов. Обратитесь к администратору.");
+            return;
         }
 
-        TgBot::Bot bot(token);
+        Student student = res.second.value();
+        
+        std::string response = "Вы авторизованы как: " + student.getName() + "\n";
+        response += "Ваша группа: " + std::to_string(student.getGroupName()) + "\n\n";
 
-        auto& db = Database::getInstance("../data/test.db");
-        db.open();
+        auto subjsRes = getSubjects(student.getGroupName());
 
-        Queue OOP(1);
-        Queue PAC(2);
+        if (subjsRes.first != FuncError::OK) {
+            bot.getApi().sendMessage(message->chat->id, response + "Предметы не найдены.");
+            return;
+        }
+
+        response += "Выберите предмет:\n";
+        
+        for (const auto& subj : subjsRes.second.value()) {
+            response += "/q_" + std::to_string(subj.getId()) + " — " + subj.getName() + "\n";
+        }
+
+        bot.getApi().sendMessage(message->chat->id, response);
+    });
 
 
-        bot.getEvents().onCommand("start", [&bot](TgBot::Message::Ptr message) {
-                bot.getApi().sendMessage(message->chat->id, "Привет! Я бот\n\n"
-                "Кто вы?\n"
-                "/student - Студент\n"
-                "/teacher - Преподаватель\n");
-        });
+    bot.getEvents().onAnyMessage([&bot](TgBot::Message::Ptr message) {
+        if (StringTools::startsWith(message->text, "/start") || 
+            StringTools::startsWith(message->text, "/student")) {
+            return;
+        }
 
-        bot.getEvents().onCommand("join", [&bot](TgBot::Message::Ptr msg) {
-                auto userId = msg->from->id;
-                std::string name = msg->from->firstName;
-                if (!msg->from->lastName.empty()) name += " " + msg->from->lastName;
+        if (StringTools::startsWith(message->text, "/q_")) {
+            try {
+                std::string idStr = message->text.substr(3);
+                int subjectId = std::stoi(idStr);
+
+                Queue queue(subjectId);
                 
-                bot.getApi().sendMessage(msg->chat->id, userId + " " + name);
-        });
+                auto qRes = queue.getQueue();
 
-        bot.getEvents().onAnyMessage([&bot](TgBot::Message::Ptr message) {
-                printf("User wrote %s\n", message->text.c_str());
-                if (StringTools::startsWith(message->text, "/start")) {
-                return;
+                std::string response = "Очередь по предмету (ID " + idStr + "):\n";
+                
+                if (qRes.first == FuncError::OK && qRes.second.has_value()) {
+                    auto list = qRes.second.value();
+                    if (list.empty()) {
+                        response += "Очередь пуста.";
+                    } else {
+                        int count = 1;
+                        for (const auto& s : list) {
+                            response += std::to_string(count++) + ". " + s.getName() + "\n";
+                        }
+                    }
+                } else {
+                    response += "Ошибка получения списка очереди.";
                 }
-                bot.getApi().sendMessage(message->chat->id, "Your message is: " + message->text);
-        });
-        
-        std::signal(SIGINT, signal_handler);
-        std::signal(SIGTERM, signal_handler);
-        
-        try {
-                auto me = bot.getApi().getMe();
-                std::cout << "Бот запущен: @" << me->username << " (" << me->firstName << ")\n";
-                std::cout << "Нажми Ctrl+C для остановки\n";
 
-                TgBot::TgLongPoll longPoll(bot);
-                while (gSignalStatus == 0) {
-                longPoll.start();
-                }
-                std::cout << "\nОстановка бота...\n";
-        } catch (const std::exception& e) {
-                std::cerr << "Ошибка: " << e.what() << std::endl;
-                return 1;
+                bot.getApi().sendMessage(message->chat->id, response);
+
+            } catch (const std::exception& e) {
+                bot.getApi().sendMessage(message->chat->id, "Некорректный номер предмета.");
+            }
         }
-        
+    });
 
-//     std::cout << "penis" << std::endl;
+    std::signal(SIGINT, signal_handler);
+    std::signal(SIGTERM, signal_handler);
+
+    try {
+        auto me = bot.getApi().getMe();
+        std::cout << "Бот запущен: @" << me->username << " (" << me->firstName << ")\n";
+        std::cout << "Нажми Ctrl+C для остановки\n";
+
+        TgBot::TgLongPoll longPoll(bot);
+        while (gSignalStatus == 0) {
+            longPoll.start();
+        }
+        std::cout << "\nОстановка бота...\n";
+    } catch (const std::exception& e) {
+        std::cerr << "Ошибка: " << e.what() << std::endl;
+        return 1;
+    }
     
-//     std::cout << "penis2" << std::endl;
-//     Subject subj(1, "ООП", 1);
-//     Queue queue(1);
- 
-//     // FuncResult<Teacher> res = subj.getaTeacher(db);
-//     // if (res.second) {
-//     //     std::cout << (*res.second).getName() << std::endl;
-//     // }
-//     // else {
-//     //     printf("%s\n", res.first);
-//     // }
-
-
-//     // FuncResult<std::vector<Seminar>> res2 = subj.getClasses(db, 24940);
-
-//     // if (res2.second) {
-//     //     for (auto v : (*res2.second)) {
-//     //         std::cout << v.id << "   " << v.date << "   " << v.comment <<std::endl;
-//     //     }
-//     // }
-//     // else {
-//     //     // printf("%s\n", res2.first);
-//     //     // Напечатать ошибку
-//     // }
-
-//     FuncResult<std::vector<Student>> q= queue.getQueue();
-//     for (auto v : (*q.second)) {
-//             std::cout << v.getId() << " " << v.getName() << " " << v.getGroupName() <<std::endl;
-//     }
-
-//     std::cout << "\npush\n"<<std::endl;
-//     queue.push(1);
-//     queue.push(2);
-//     queue.push(3);
-//     queue.push(4);
-    
-//     q= queue.getQueue();
-//     for (auto v : (*q.second)) {
-//             std::cout << v.getId() << " " << v.getName() << " " << v.getGroupName() <<std::endl;
-//     }
-
-//     std::cout << "\n penis\n" << std::endl; 
-//     queue.pop();
-//     std::cout << "\n penis\n" << std::endl;
-
-//     q = queue.getQueue();
-//     for (auto v : (*q.second)) {
-//             std::cout << v.getId() << " " << v.getName() << " " << v.getGroupName() <<std::endl;
-//     }
-
-//     // q = queue.getQueue();
-
-//     // for (auto v : (*q.second)) {
-//     //         std::cout << v.getName() << v.getGroupName() <<std::endl;
-//     // }
-
-//     // std::cout << "\npop\n"<<std::endl;
-    
-//     // queue.pop();
-
-//     // auto res = queue.swap(1, 3);
-//     // if (res.first != FuncError::OK) {
-//     //     std::cerr << "Swap failed: " << static_cast<int>(res.first) << std::endl;
-//     // } else {
-//     //     std::cout << "Swap OK\n";
-//     // }
-
-    
-
-
-//     // std::cout << "\nskip\n"<<std::endl;
-    
-//     // queue.skip();
-
-//     // q = queue.getQueue();
-
-//     // for (auto v : (*q.second)) {
-//     //         std::cout << v.getName() << v.getGroupName() <<std::endl;
-//     // }
-
-//     // std::cout << "\ngive up\n"<<std::endl;
-    
-//     // queue.give_up(3);
-
-//     // q = queue.getQueue();
-
-//     // for (auto v : (*q.second)) {
-//     //         std::cout << v.getName() << v.getGroupName() <<std::endl;
-//     // }
-
-//     // queue.pop();
-//     // queue.pop();
-//     // queue.pop();
-    
-//     // TODO Тесты всех функций
+    return 0;
 }
