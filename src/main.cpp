@@ -7,8 +7,10 @@
 #include <iostream>
 #include <tgbot/tgbot.h>
 
-int main() {
+volatile std::sig_atomic_t gSignalStatus = 0;
+void signal_handler(int signal) { gSignalStatus = signal; }
 
+int main() {
         const char* token = std::getenv("BOT_TOKEN");
         if (!token) {
                 std::cerr << "ОШИБКА: переменная BOT_TOKEN не установлена!\n";
@@ -16,9 +18,29 @@ int main() {
         }
 
         TgBot::Bot bot(token);
+
+        auto& db = Database::getInstance("../data/test.db");
+        db.open();
+
+        Queue OOP(1);
+        Queue PAC(2);
+
+
         bot.getEvents().onCommand("start", [&bot](TgBot::Message::Ptr message) {
-                bot.getApi().sendMessage(message->chat->id, "Hi!");
+                bot.getApi().sendMessage(message->chat->id, "Привет! Я бот\n\n"
+                "Кто вы?\n"
+                "/student - Студент\n"
+                "/teacher - Преподаватель\n");
         });
+
+        bot.getEvents().onCommand("join", [&bot](TgBot::Message::Ptr msg) {
+                auto userId = msg->from->id;
+                std::string name = msg->from->firstName;
+                if (!msg->from->lastName.empty()) name += " " + msg->from->lastName;
+                
+                bot.getApi().sendMessage(msg->chat->id, userId + " " + name);
+        });
+
         bot.getEvents().onAnyMessage([&bot](TgBot::Message::Ptr message) {
                 printf("User wrote %s\n", message->text.c_str());
                 if (StringTools::startsWith(message->text, "/start")) {
@@ -26,21 +48,28 @@ int main() {
                 }
                 bot.getApi().sendMessage(message->chat->id, "Your message is: " + message->text);
         });
+        
+        std::signal(SIGINT, signal_handler);
+        std::signal(SIGTERM, signal_handler);
+        
         try {
-                printf("Bot username: %s\n", bot.getApi().getMe()->username.c_str());
+                auto me = bot.getApi().getMe();
+                std::cout << "Бот запущен: @" << me->username << " (" << me->firstName << ")\n";
+                std::cout << "Нажми Ctrl+C для остановки\n";
+
                 TgBot::TgLongPoll longPoll(bot);
-                while (true) {
-                printf("Long poll started\n");
+                while (gSignalStatus == 0) {
                 longPoll.start();
                 }
-        } catch (TgBot::TgException& e) {
-                printf("error: %s\n", e.what());
+                std::cout << "\nОстановка бота...\n";
+        } catch (const std::exception& e) {
+                std::cerr << "Ошибка: " << e.what() << std::endl;
+                return 1;
         }
-        return 0;
+        
 
 //     std::cout << "penis" << std::endl;
-//     auto& db = Database::getInstance("../data/test.db");
-//     db.open();
+    
 //     std::cout << "penis2" << std::endl;
 //     Subject subj(1, "ООП", 1);
 //     Queue queue(1);
