@@ -15,10 +15,24 @@
 
 # Сборка Docker-контейнера
 ```
-docker build -t iir-queue-bot .
+sudo docker build -t iir-queue-bot .
 ```
 
-# Запуск контейнера
+# Запуск контейнера (одноразового)
 ```
-docker run --rm -e BOT_TOKEN="8271031556:AAEnbmv-r2nN78h84EwUKmzq91dRBUNnSek" iir-queue-bot
+sudo docker run --rm -e BOT_TOKEN="8271031556:AAEnbmv-r2nN78h84EwUKmzq91dRBUNnSek" -v "$(pwd)/data:/data" iir-queue-bot
+```
+
+# Запуск контейнера (start/stop)
+```
+sudo docker run -d \
+  --name iir-queue-bot \
+  -e BOT_TOKEN="8271031556:AAEnbmv-r2nN78h84EwUKmzq91dRBUNnSek" \
+  -v "$(pwd)/data:/data" \
+  iir-queue-bot
+```
+
+# Удаление старого контейнера
+```
+sudo docker rm iir-queue-bot
 ```

@@ -50,7 +50,7 @@ FuncResult <Student> studentByTGID (const std::string& TG_id) {
 }
 
 FuncResult <std::vector<Subject>> getSubjects(int group_id) {
-   auto &db = Database::getInstance();
+       auto &db = Database::getInstance();
     
     if (!db.get_conn()) {
         return {FuncError::DB_NOT_OPEN, std::nullopt};
@@ -94,4 +94,44 @@ FuncResult <std::vector<Subject>> getSubjects(int group_id) {
 
     sqlite3_finalize(stmt);
     return {FuncError::OK, subjects};
+}
+
+// Создает одну кнопку
+TgBot::InlineKeyboardButton::Ptr createBtn(const std::string& text, const std::string& callbackData) {
+    auto btn = std::make_shared<TgBot::InlineKeyboardButton>();
+    btn->text = text;
+    btn->callbackData = callbackData;
+    return btn;
+}
+
+// Создает клавиатуру из списка пар {Текст, CallbackData}
+TgBot::InlineKeyboardMarkup::Ptr createKeyboard(const std::vector<std::pair<std::string, std::string>>& buttonsData, bool asRows) {
+    auto keyboard = std::make_shared<TgBot::InlineKeyboardMarkup>();
+    
+    for (const auto& data : buttonsData) {
+        std::vector<TgBot::InlineKeyboardButton::Ptr> row;
+        row.push_back(createBtn(data.first, data.second));
+        keyboard->inlineKeyboard.push_back(row);
+    }
+    return keyboard;
+}
+
+// Вспомогательная функция для создания кнопок управления очередью (в одну строку)
+TgBot::InlineKeyboardMarkup::Ptr createQueueControls(int subjectId) {
+    auto keyboard = std::make_shared<TgBot::InlineKeyboardMarkup>();
+    std::vector<TgBot::InlineKeyboardButton::Ptr> row;
+
+    std::string sId = std::to_string(subjectId);
+    row.push_back(createBtn("Записаться", "join_" + sId));
+    row.push_back(createBtn("Выйти", "leave_" + sId));
+    row.push_back(createBtn("Обновить ⟳", "view_" + sId)); 
+
+    keyboard->inlineKeyboard.push_back(row);
+    
+    // Кнопка "Назад" отдельной строкой
+    std::vector<TgBot::InlineKeyboardButton::Ptr> rowBack;
+    rowBack.push_back(createBtn("« К списку предметов", "role_student"));
+    keyboard->inlineKeyboard.push_back(rowBack);
+
+    return keyboard;
 }
