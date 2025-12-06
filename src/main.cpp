@@ -67,7 +67,7 @@ int main() {
 
         if (StringTools::startsWith(message->text, "/q_")) {
             try {
-                std::string idStr = message->text.substr(3);
+                std::string idStr = message->text.substr(3, 1);
                 int subjectId = std::stoi(idStr);
 
                 Queue queue(subjectId);
@@ -105,6 +105,7 @@ int main() {
         auto me = bot.getApi().getMe();
         std::cout << "Бот запущен: @" << me->username << " (" << me->firstName << ")\n";
         std::cout << "Нажми Ctrl+C для остановки\n";
+        fflush(stdout);
 
         TgBot::TgLongPoll longPoll(bot);
         while (gSignalStatus == 0) {
