@@ -105,21 +105,23 @@ int main() {
 
         // Обработка команд
         std::string action;
-        int subjectId = 0;
+        Subject subj;
+        subj.setId(0);
 
         if (StringTools::startsWith(data, "view_")) {
             action = "view";
-            subjectId = std::stoi(data.substr(5));
+            subj.setId(std::stoi(data.substr(5)));
         } else if (StringTools::startsWith(data, "join_")) {
             action = "join";
-            subjectId = std::stoi(data.substr(5));
+            subj.setId(std::stoi(data.substr(5)));
         } else if (StringTools::startsWith(data, "leave_")) {
             action = "leave";
-            subjectId = std::stoi(data.substr(6));
+            subj.setId(std::stoi(data.substr(6)));
         }
 
-        if (subjectId > 0) {
-            Queue queue(subjectId);
+        if (subj.getId() > 0) {
+            Queue queue(subj.getId());
+            subj.sync();
             
             auto studentRes = studentByTGID(std::to_string(userId));
             int dbStudentId = -1;
@@ -129,13 +131,13 @@ int main() {
 
             std::string alertText = "";
 
-            // TODO проверка на присутствие в очереди (не равботает)
             if (action == "join") {
                 if (dbStudentId != -1) {
                     auto res = queue.push(dbStudentId);
                     if (res.first == FuncError::OK) alertText = "Вы добавлены в очередь!";
                     else alertText = "Ошибка добавления (возможно, вы уже в очереди).";
                 }
+                action = "view";
             } 
             else if (action == "leave") {
                  if (dbStudentId != -1) {
@@ -143,40 +145,57 @@ int main() {
                     if (res == FuncError::OK) alertText = "Вы покинули очередь.";
                     else alertText = "Ошибка выхода (возможно, вас нет в очереди).";
                  }
+                 action = "view";
             }
 
-            auto qRes = queue.getQueue();
-            // TODO Сделать название предмета а не код
-            std::string response = "Очередь по предмету (ID " + std::to_string(subjectId) + "):\n\n";
+            if (action == "view") {
+                
+                int studentPosition = -1;
+                bool isInQueue = false;
 
-            if (qRes.first == FuncError::OK && qRes.second.has_value()) {
-                auto list = qRes.second.value();
-                if (list.empty()) {
-                    response += "Очередь пока пуста.";
-                } else {
-                    int count = 1;
-                    for (const auto& s : list) {
-                        response += std::to_string(count++) + ". " + s.getName();
-                        if (s.getId() == dbStudentId) response += " (Вы)";
-                        response += "\n";
+                if (dbStudentId != -1) {
+                    auto posRes = queue.getPosition(dbStudentId);
+                    if (posRes.first == FuncError::OK) {
+                        studentPosition = posRes.second.value();
+                        isInQueue = true;
                     }
                 }
-            } else {
-                response += "Ошибка получения списка очереди.";
+                
+                auto qRes = queue.getQueue();
+                
+                std::string response = "Очередь по предмету (*" + subj.getName() + "*):\n\n";
+
+                if (isInQueue) {
+                    response = "*Ваша позиция в очереди: " + std::to_string(studentPosition) + "*\n\n" + response;
+                }
+
+                if (qRes.first == FuncError::OK && qRes.second.has_value()) {
+                    auto list = qRes.second.value();
+                    if (list.empty()) {
+                        response += "Очередь пока пуста.";
+                    } else {
+                        int count = 1;
+                        for (const auto& s : list) {
+                            response += std::to_string(count++) + ". " + s.getName();
+                            if (s.getId() == dbStudentId) response += " (Вы)";
+                            response += "\n";
+                        }
+                    }
+                } else {
+                    response += "Ошибка получения списка очереди.";
+                }
+
+                auto keyboard = createQueueControls(subj.getId(), isInQueue);
+                
+                try {
+                    bot.getApi().editMessageText(response, chatId, query->message->messageId, "", "Markdown", nullptr, keyboard);
+                } catch (const std::exception& e) {
+                    // Игнорируем ошибку "message is not modified"
+                }
             }
 
-            auto keyboard = createQueueControls(subjectId);
-
-            // TODO хз че это вообще за блок
-            try {
-                bot.getApi().editMessageText(response, chatId, query->message->messageId, "", "", nullptr, keyboard);
-            } catch (const std::exception& e) {
-                // Игнорируем ошибку "message is not modified"
-            }
-
-            bot.getApi().answerCallbackQuery(query->id, alertText); 
+            bot.getApi().answerCallbackQuery(query->id, alertText);
         }
-
     });
 
     bot.getEvents().onAnyMessage([&bot](TgBot::Message::Ptr message) {

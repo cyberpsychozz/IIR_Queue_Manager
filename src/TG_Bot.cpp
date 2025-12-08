@@ -117,13 +117,20 @@ TgBot::InlineKeyboardMarkup::Ptr createKeyboard(const std::vector<std::pair<std:
 }
 
 // Вспомогательная функция для создания кнопок управления очередью (в одну строку)
-TgBot::InlineKeyboardMarkup::Ptr createQueueControls(int subjectId) {
+TgBot::InlineKeyboardMarkup::Ptr createQueueControls(int subjectId, bool isInQueue) { // <--- Изменено
     auto keyboard = std::make_shared<TgBot::InlineKeyboardMarkup>();
     std::vector<TgBot::InlineKeyboardButton::Ptr> row;
 
     std::string sId = std::to_string(subjectId);
-    row.push_back(createBtn("Записаться", "join_" + sId));
-    row.push_back(createBtn("Выйти", "leave_" + sId));
+    
+    if (isInQueue) {
+        // Если студент в очереди, показываем "Выйти"
+        row.push_back(createBtn("Выйти", "leave_" + sId));
+    } else {
+        // Иначе показываем "Записаться"
+        row.push_back(createBtn("Записаться", "join_" + sId));
+    }
+    
     row.push_back(createBtn("Обновить ⟳", "view_" + sId)); 
 
     keyboard->inlineKeyboard.push_back(row);

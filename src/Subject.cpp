@@ -19,6 +19,50 @@ void Subject::setName(const std::string& newName) { name = newName; }
 
 // Functions
 
+// Извлекает данные о предмете по его Id
+FuncError Subject::sync() {
+    auto &db = Database::getInstance();
+
+    // Проверяем, что соединение открыто
+    if (!db.get_conn()) {
+        return FuncError::DB_NOT_OPEN;
+    }
+
+    const char* sql = R"(
+        SELECT *
+        FROM Subjects S
+        WHERE S.Id = ?
+    )";
+
+    sqlite3_stmt* stmt = nullptr;
+    auto rc = sqlite3_prepare_v2(db.get_conn(), sql, -1, &stmt, nullptr);
+
+    sqlite3_bind_int(stmt, 1, id);
+
+    rc = sqlite3_step(stmt);
+    
+    // Вернулась строка
+    if (rc == SQLITE_ROW) {
+        const unsigned char* namebd = sqlite3_column_text(stmt, 1);
+        name = std::string(reinterpret_cast<const char*>(namebd));
+        teacher_id = sqlite3_column_int(stmt, 2);
+    } 
+    // Не вернулся результат    
+    else if (rc == SQLITE_DONE) {
+        sqlite3_finalize(stmt);
+        return FuncError::NOT_FOUND;
+    }
+    // Вернулась ошибка 
+    else {
+        sqlite3_finalize(stmt);
+        return FuncError::STEP_FAILED;
+    }
+    
+    sqlite3_finalize(stmt);
+
+    return FuncError::OK;
+}
+
 // Возвращает данные преподавателя данного предмета
 FuncResult<Teacher> Subject::getTeacher() const {
     auto &db = Database::getInstance();

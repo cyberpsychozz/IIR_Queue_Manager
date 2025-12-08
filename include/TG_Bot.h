@@ -9,4 +9,4 @@ TgBot::InlineKeyboardButton::Ptr createBtn(const std::string& text, const std::s
 
 TgBot::InlineKeyboardMarkup::Ptr createKeyboard(const std::vector<std::pair<std::string, std::string>>& buttonsData, bool asRows = true);
 
-TgBot::InlineKeyboardMarkup::Ptr createQueueControls(int subjectId);
+TgBot::InlineKeyboardMarkup::Ptr createQueueControls(int subjectId, bool isInQueue);

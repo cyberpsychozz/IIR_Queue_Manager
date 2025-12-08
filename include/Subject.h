@@ -32,6 +32,7 @@ public:
     void setName(const std::string& newName);
 
     // Functions
+    FuncError sync();
     
     FuncResult<Teacher> getTeacher() const;
     FuncResult<std::vector<Seminar>> getClasses(int group) const;
