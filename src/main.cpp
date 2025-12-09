@@ -8,7 +8,7 @@
 
 volatile std::sig_atomic_t gSignalStatus = 0;
 void signal_handler(int signal) { gSignalStatus = signal; }
-
+//TODO Раскидать группы отдельно
 int main() {
     const char* token = std::getenv("BOT_TOKEN");
     if (!token) {
@@ -51,11 +51,10 @@ int main() {
                 case (FuncError::OK): 
                     {
                     Student student = res.second.value();
-                    auto subjsRes = getSubjects(student.getGroupName());
+                    auto subjsRes = student.getSubjects();
 
                     if (subjsRes.first != FuncError::OK) {
                         bot.getApi().answerCallbackQuery(query->id, "Предметы не найдены");
-                        bot.getApi().sendMessage(chatId, "Для вашей группы не найдено предметов(");
                         return;
                     }
 
@@ -85,22 +84,64 @@ int main() {
                 case (FuncError::NOT_FOUND):
                     // TODO регистрация
                     bot.getApi().answerCallbackQuery(query->id, "Вас нет в списке студентов!");
-                    bot.getApi().sendMessage(chatId, "Вас нет в списке студентов. Обратитесь к администратору.");
                     return;
 
                 // Ошибки запроса
                 default:
-                    bot.getApi().answerCallbackQuery(query->id, "Ошибка запроса");
-                    bot.getApi().sendMessage(chatId, "Ошибка, попробуйте позже.");
+                    bot.getApi().answerCallbackQuery(query->id, "Ошибка запроса, попробуйте позже.");
                     return;
             }
         }
         
         // Преподаваель 
-        // TODO
-        if (data == "role_teacher") {
-             bot.getApi().answerCallbackQuery(query->id, "Раздел в разработке", true);
-             return;
+        else if (data == "role_teacher") {
+            std::string tgId = std::to_string(userId);
+            auto res = teacherByTGID(tgId);
+
+            switch (res.first) {
+                // Преподаватель найден
+                case (FuncError::OK): 
+                    {
+                    Teacher teacher = res.second.value();
+                    auto subjsRes = teacher.getSubjects();
+
+                    if (subjsRes.first != FuncError::OK) {
+                        bot.getApi().answerCallbackQuery(query->id, "Предметы не найдены");
+                        return;
+                    }
+
+                    // Формируем клавиатуру с предметами
+                    std::vector<std::pair<std::string, std::string>> subjButtons;
+                    for (const auto& subj : subjsRes.second.value()) {
+                        subjButtons.push_back({subj.getName(), "view_" + std::to_string(subj.getId())});
+                    }
+
+                    auto keyboard = createKeyboard(subjButtons);
+                    
+                    std::string text = "Вы авторизованы как: *" + teacher.getName() + "*\n\n" +
+                                    "Доступные предметы:";
+
+                    try {
+                        bot.getApi().editMessageText(text, chatId, query->message->messageId, "", "Markdown", nullptr, keyboard);
+                    } catch (...) {
+                        bot.getApi().sendMessage(chatId, text, nullptr, nullptr, keyboard, "Markdown");
+                    }
+                    
+                    bot.getApi().answerCallbackQuery(query->id);
+                    return;
+                    }
+                
+                // Преподаватель не зарегистрирован
+                case (FuncError::NOT_FOUND):
+                    // TODO регистрация
+                    bot.getApi().answerCallbackQuery(query->id, "Вас нет в списке преподавателей!");
+                    return;
+
+                // Ошибки запроса
+                default:
+                    bot.getApi().answerCallbackQuery(query->id, "Ошибка запроса, попробуйте позже.");
+                    return;
+            }
         }
 
         // Обработка команд
@@ -123,57 +164,45 @@ int main() {
             Queue queue(subj.getId());
             subj.sync();
             
-            auto studentRes = studentByTGID(std::to_string(userId));
-            int dbStudentId = -1;
+            auto qRes = queue.getQueue();
+            std::string tgIdStr = std::to_string(userId);
+
+            auto studentRes = studentByTGID(tgIdStr);
+
             if (studentRes.first == FuncError::OK) {
-                dbStudentId = studentRes.second.value().getId();
-            }
+                int dbStudentId = studentRes.second.value().getId();
+                std::string alertText = "";
 
-            std::string alertText = "";
-
-            if (action == "join") {
-                if (dbStudentId != -1) {
+                if (action == "join") {
                     auto res = queue.push(dbStudentId);
                     if (res.first == FuncError::OK) alertText = "Вы добавлены в очередь!";
-                    else alertText = "Ошибка добавления (возможно, вы уже в очереди).";
-                }
-                action = "view";
-            } 
-            else if (action == "leave") {
-                 if (dbStudentId != -1) {
+                    else alertText = "Ошибка: возможно, вы уже в очереди.";
+                } 
+                else if (action == "leave") {
                     auto res = queue.give_up(dbStudentId);
                     if (res == FuncError::OK) alertText = "Вы покинули очередь.";
-                    else alertText = "Ошибка выхода (возможно, вас нет в очереди).";
-                 }
-                 action = "view";
-            }
+                    else alertText = "Ошибка выхода.";
+                }
 
-            if (action == "view") {
-                
                 int studentPosition = -1;
                 bool isInQueue = false;
-
-                if (dbStudentId != -1) {
-                    auto posRes = queue.getPosition(dbStudentId);
-                    if (posRes.first == FuncError::OK) {
-                        studentPosition = posRes.second.value();
-                        isInQueue = true;
-                    }
+                
+                auto posRes = queue.getPosition(dbStudentId);
+                if (posRes.first == FuncError::OK) {
+                    studentPosition = posRes.second.value();
+                    isInQueue = true;
                 }
-                
-                auto qRes = queue.getQueue();
-                
-                std::string response = "Очередь по предмету (*" + subj.getName() + "*):\n\n";
 
+                std::string response = "Очередь по предмету *" + subj.getName() + "*:\n\n";
+                
                 if (isInQueue) {
-                    response = "*Ваша позиция в очереди: " + std::to_string(studentPosition) + "*\n\n" + response;
+                    response = " *Ваша позиция: " + std::to_string(studentPosition) + "*\n\n" + response;
                 }
 
                 if (qRes.first == FuncError::OK && qRes.second.has_value()) {
                     auto list = qRes.second.value();
-                    if (list.empty()) {
-                        response += "Очередь пока пуста.";
-                    } else {
+                    if (list.empty()) response += "Очередь пуста.";
+                    else {
                         int count = 1;
                         for (const auto& s : list) {
                             response += std::to_string(count++) + ". " + s.getName();
@@ -182,19 +211,49 @@ int main() {
                         }
                     }
                 } else {
-                    response += "Ошибка получения списка очереди.";
+                    response += "Ошибка получения списка.";
                 }
 
                 auto keyboard = createQueueControls(subj.getId(), isInQueue);
                 
                 try {
                     bot.getApi().editMessageText(response, chatId, query->message->messageId, "", "Markdown", nullptr, keyboard);
-                } catch (const std::exception& e) {
-                    // Игнорируем ошибку "message is not modified"
+                } catch (...) {}
+                
+                bot.getApi().answerCallbackQuery(query->id, alertText);
+            } 
+            else {
+                auto teacherRes = teacherByTGID(tgIdStr);
+                
+                if (teacherRes.first == FuncError::OK) {
+
+                    std::string response = "Очередь студентов по предмету *" + subj.getName() + "*:\n\n";
+
+                    if (qRes.first == FuncError::OK && qRes.second.has_value()) {
+                        auto list = qRes.second.value();
+                        if (list.empty()) response += "Список пуст.";
+                        else {
+                            int count = 1;
+                            for (const auto& s : list) {
+                                response += std::to_string(count++) + ". " + s.getName() + "\n";
+                            }
+                        }
+                    } else {
+                        response += "Ошибка получения списка.";
+                    }
+
+                    auto keyboard = createTeacherQueueControls(subj.getId());
+
+                    try {
+                        bot.getApi().editMessageText(response, chatId, query->message->messageId, "", "Markdown", nullptr, keyboard);
+                    } catch (...) {}
+
+                    bot.getApi().answerCallbackQuery(query->id);
+                }
+                else {
+                    bot.getApi().answerCallbackQuery(query->id, "Ошибка доступа. Вы не авторизованы.", true);
                 }
             }
-
-            bot.getApi().answerCallbackQuery(query->id, alertText);
         }
     });
 

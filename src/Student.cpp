@@ -53,7 +53,7 @@ FuncResult<std::vector<Subject>> Student::getSubjects() const {
         subj.setId(id);
         subj.setTeacherId(sqlite3_column_int(stmt, 2));
 
-        const char* name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+        const char* name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
         subj.setName(std::string(reinterpret_cast<const char*>(name)));
         
         subjects.push_back(subj);
@@ -63,6 +63,10 @@ FuncResult<std::vector<Subject>> Student::getSubjects() const {
     if (rc != SQLITE_DONE) {
         sqlite3_finalize(stmt);
         return {FuncError::STEP_FAILED, std::nullopt};
+    }
+    else if (subjects.empty()) {
+        sqlite3_finalize(stmt);
+        return {FuncError::NOT_FOUND, std::nullopt};
     }
 
     sqlite3_finalize(stmt);

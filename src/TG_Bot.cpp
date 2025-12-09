@@ -1,5 +1,7 @@
 #include <TG_Bot.h>
 
+// Возвращает студента по его TG Id
+// Если студент не найден возвращает FuncError::NOT_FOUND
 FuncResult <Student> studentByTGID (const std::string& TG_id) {
     auto &db = Database::getInstance();
 
@@ -49,51 +51,53 @@ FuncResult <Student> studentByTGID (const std::string& TG_id) {
     return {FuncError::OK, student};
 }
 
-FuncResult <std::vector<Subject>> getSubjects(int group_id) {
-       auto &db = Database::getInstance();
-    
+// Возвращает преподавателя по его TG Id
+// Если преподаватель не найден возвращает FuncError::NOT_FOUND
+FuncResult <Teacher> teacherByTGID (const std::string& TG_id) {
+    auto &db = Database::getInstance();
+
     if (!db.get_conn()) {
         return {FuncError::DB_NOT_OPEN, std::nullopt};
     }
 
     const char* sql = R"(
-        SELECT Id, Name, Teacher_Id
-        FROM Subjects
-        WHERE instr(Groups, ?) > 0;
+        SELECT Id, Name, Login FROM Teachers
+        WHERE TG_id = ?
     )";
 
     sqlite3_stmt* stmt = nullptr;
     auto rc = sqlite3_prepare_v2(db.get_conn(), sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        sqlite3_finalize(stmt);
-        return {FuncError::PREPARE_FAILED, std::nullopt};
-    }
 
-    sqlite3_bind_int(stmt, 1, group_id);
+    sqlite3_bind_text(stmt, 1, TG_id.c_str(), -1, SQLITE_STATIC);
 
-    std::vector<Subject> subjects;
-    Subject subj;
-    int id = 1;
+    Teacher teacher;
+
+    rc = sqlite3_step(stmt);
     
-    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-
-        subj.setId(id);
-        subj.setTeacherId(sqlite3_column_int(stmt, 2));
-
-        const char* name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
-        subj.setName(std::string(reinterpret_cast<const char*>(name)));
+    if (rc == SQLITE_ROW) {
+        int teacherId = sqlite3_column_int(stmt, 0);
+        const unsigned char* name = sqlite3_column_text(stmt, 1);
+        const unsigned char* login = sqlite3_column_text(stmt, 2);
         
-        subjects.push_back(subj);
-        ++id;
+        teacher.setId(teacherId);
+        teacher.setName(std::string(reinterpret_cast<const char*>(name)));
+        teacher.setLogin(std::string(reinterpret_cast<const char*>(login)));
+        teacher.setUsernameTg(TG_id);
+    } 
+
+    else if (rc == SQLITE_DONE) {
+        sqlite3_finalize(stmt);
+        return {FuncError::NOT_FOUND, std::nullopt};
     }
 
-    if (rc != SQLITE_DONE) {
+    else {
         sqlite3_finalize(stmt);
         return {FuncError::STEP_FAILED, std::nullopt};
     }
-
+    
     sqlite3_finalize(stmt);
-    return {FuncError::OK, subjects};
+
+    return {FuncError::OK, teacher};
 }
 
 // Создает одну кнопку
@@ -117,7 +121,7 @@ TgBot::InlineKeyboardMarkup::Ptr createKeyboard(const std::vector<std::pair<std:
 }
 
 // Вспомогательная функция для создания кнопок управления очередью (в одну строку)
-TgBot::InlineKeyboardMarkup::Ptr createQueueControls(int subjectId, bool isInQueue) { // <--- Изменено
+TgBot::InlineKeyboardMarkup::Ptr createQueueControls(int subjectId, bool isInQueue) {
     auto keyboard = std::make_shared<TgBot::InlineKeyboardMarkup>();
     std::vector<TgBot::InlineKeyboardButton::Ptr> row;
 
@@ -138,6 +142,24 @@ TgBot::InlineKeyboardMarkup::Ptr createQueueControls(int subjectId, bool isInQue
     // Кнопка "Назад" отдельной строкой
     std::vector<TgBot::InlineKeyboardButton::Ptr> rowBack;
     rowBack.push_back(createBtn("« К списку предметов", "role_student"));
+    keyboard->inlineKeyboard.push_back(rowBack);
+
+    return keyboard;
+}
+
+// Кнопки управления для преподователя
+TgBot::InlineKeyboardMarkup::Ptr createTeacherQueueControls(int subjectId) {
+    auto keyboard = std::make_shared<TgBot::InlineKeyboardMarkup>();
+    std::string sId = std::to_string(subjectId);
+
+    // 1 строка
+    std::vector<TgBot::InlineKeyboardButton::Ptr> row;
+    row.push_back(createBtn("Обновить ⟳", "view_" + sId)); 
+    keyboard->inlineKeyboard.push_back(row);
+    
+    // 2 строка
+    std::vector<TgBot::InlineKeyboardButton::Ptr> rowBack;
+    rowBack.push_back(createBtn("« К списку предметов", "role_teacher"));
     keyboard->inlineKeyboard.push_back(rowBack);
 
     return keyboard;
