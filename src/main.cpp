@@ -82,29 +82,26 @@ int main() {
                 
                 // Студент не зарегистрирован
                 case (FuncError::NOT_FOUND):
-                    // TODO регистрация
+                    // TODO навести красоту
                     bot.getApi().answerCallbackQuery(query->id, "Вас нет в списке студентов!");
                     bot.getApi().sendMessage(chatId, "Если у вас нет логина, обратитесь к администраторам.");
                     bot.getApi().sendMessage(chatId, "Если у вас есть логин, введите его:");
                     bot.getEvents().onAnyMessage([&bot](TgBot::Message::Ptr message){
-                        Student student;
                         std::string login = message->text;
                         std::string id = std::to_string(message ->from-> id);
                         int64_t chatId= message->chat->id;
-                        student.setUsernameTg(id);
-                        auto res = student.addStudent(login);
+                        auto res = registrate(login, id);
                         switch(res){
                             case(FuncError::OK):{
                                 bot.getApi().sendMessage(chatId, "Поздравляю, теперь ты есть в бд и твои данные утекут в даркнет");
                                 return;
                             }
                             case(FuncError::NOT_FOUND):{
-                                bot.getApi().sendMessage(chatId, "Ты не достоин(можешь попробовать ещё раз, правда все твои попытки тщетны), нажми старт еще раз, лох");
+                                bot.getApi().sendMessage(chatId, "Ты не достоин(можешь попробовать ещё раз, правда все твои попытки тщетны)");
                                 return;
                             }
                         }
                     });
-                        
 
                 // Ошибки запроса
                 default:
@@ -153,9 +150,26 @@ int main() {
                 
                 // Преподаватель не зарегистрирован
                 case (FuncError::NOT_FOUND):
-                    // TODO регистрация
+                    // TODO навести красоту
                     bot.getApi().answerCallbackQuery(query->id, "Вас нет в списке преподавателей!");
-                    return;
+                    bot.getApi().sendMessage(chatId, "Если у вас нет логина, обратитесь к администраторам.");
+                    bot.getApi().sendMessage(chatId, "Если у вас есть логин, введите его:");
+                    bot.getEvents().onAnyMessage([&bot](TgBot::Message::Ptr message){
+                        std::string login = message->text;
+                        std::string id = std::to_string(message ->from-> id);
+                        int64_t chatId= message->chat->id;
+                        auto res = registrate(login, id);
+                        switch(res){
+                            case(FuncError::OK):{
+                                bot.getApi().sendMessage(chatId, "Вы успешно зарегистрированы");
+                                return;
+                            }
+                            case(FuncError::NOT_FOUND):{
+                                bot.getApi().sendMessage(chatId, "Некорректный логин");
+                                return;
+                            }
+                        }
+                    });
 
                 // Ошибки запроса
                 default:

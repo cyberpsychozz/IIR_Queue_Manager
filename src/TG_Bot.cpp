@@ -164,3 +164,77 @@ TgBot::InlineKeyboardMarkup::Ptr createTeacherQueueControls(int subjectId) {
 
     return keyboard;
 }
+
+// Регистрируем студента/преподавателя в БД по логину
+FuncError registrate(std::string login, std::string TG_Id, bool prepod) {
+    auto &db = Database::getInstance();
+    sqlite3_stmt* stmt = nullptr;
+
+    if (!db.get_conn()) {
+        return FuncError::DB_NOT_OPEN;
+    }
+
+    int Id;
+    std::string sql_find;
+    std::string sql_update;
+
+    if (prepod) {
+        sql_find = R"(SELECT Id FROM Teachers
+                   WHERE Login = ?)";
+
+        sql_update = R"(UPDATE Teachers
+                     SET (TG_id) = (?)
+                     WHERE Id = ?)";
+    }
+    else {
+        sql_find = R"(SELECT Id FROM Students
+                   WHERE Login = ?)";
+
+        sql_update = R"(UPDATE Students
+                     SET (TG_id) = (?)
+                     WHERE Id = ?)";
+    }
+
+
+    if (sqlite3_prepare_v2(db.get_conn(), sql_find.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+        return FuncError::PREPARE_FAILED;
+    }
+
+    sqlite3_bind_text(stmt, 1, login.c_str(), -1, SQLITE_STATIC);
+
+    auto rc = sqlite3_step(stmt);
+
+    // Вернулась строка
+    if (rc == SQLITE_ROW) {
+        Id = sqlite3_column_int(stmt, 0);
+        sqlite3_finalize(stmt);
+    } 
+    // Не найден
+    else if (rc == SQLITE_DONE) {
+        sqlite3_finalize(stmt);
+        return FuncError::NOT_FOUND;
+    }
+    // Вернулась ошибка 
+    else {
+        sqlite3_finalize(stmt);
+        return FuncError::STEP_FAILED;
+    }
+
+    // Обновление
+    if (sqlite3_prepare_v2(db.get_conn(), sql_update.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+        return FuncError::PREPARE_FAILED;
+    }
+
+    sqlite3_bind_int(stmt, 2, Id);
+
+    sqlite3_bind_text(stmt, 1, TG_Id.c_str(), -1, SQLITE_STATIC);
+
+    if (sqlite3_step(stmt) != SQLITE_DONE) {
+        sqlite3_finalize(stmt);
+        return FuncError::STEP_FAILED;
+    }
+
+    sqlite3_finalize(stmt);
+
+    return FuncError::OK;
+}
