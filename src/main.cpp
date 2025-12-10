@@ -158,7 +158,7 @@ int main() {
                         std::string login = message->text;
                         std::string id = std::to_string(message ->from-> id);
                         int64_t chatId= message->chat->id;
-                        auto res = registrate(login, id);
+                        auto res = registrate(login, id, true);
                         switch(res){
                             case(FuncError::OK):{
                                 bot.getApi().sendMessage(chatId, "Вы успешно зарегистрированы");
