@@ -75,7 +75,7 @@ FuncResult<std::vector<Subject>> Student::getSubjects() const {
 
 /** 
  * Добавляем или обновляем данные студента
- * Поиск происходит по имени.
+ * Поиск происходит по логину.
  *  
  * Если задан атрибут name, то данные студента будут обновлены на данные из объекта класса
  * откуда вызывается функция. (Все данные, кроме Id)
@@ -84,7 +84,7 @@ FuncResult<std::vector<Subject>> Student::getSubjects() const {
  * 
  * ВАЖНО!!! ОБНОВЛЯЕТ Telegram_Id
 */
-FuncError Student::addStudent(std::optional<std::string> name) {
+FuncError Student::addStudent(std::optional<std::string> login) {
     auto &db = Database::getInstance();
     sqlite3_stmt* stmt = nullptr;
 
@@ -92,22 +92,22 @@ FuncError Student::addStudent(std::optional<std::string> name) {
         return FuncError::DB_NOT_OPEN;
     }
 
-    if (name.has_value()) {
+    if (login.has_value()) {
 
         int studentId;
 
         std::string sql_find = R"(SELECT Id FROM Students
-                               WHERE Name = ?)";
+                               WHERE Login = ?)";
 
         std::string sql_update = R"(UPDATE Students
-                                 SET (Groups, Name, Login, TG_id) = (?, ?, ?, ?)
+                                 SET (TG_id) = (?)
                                  WHERE Id = ?)";
 
         if (sqlite3_prepare_v2(db.get_conn(), sql_find.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
             return FuncError::PREPARE_FAILED;
         }
 
-        sqlite3_bind_text(stmt, 1, (*name).c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 1, (*login).c_str(), -1, SQLITE_STATIC);
 
         auto rc = sqlite3_step(stmt);
 
@@ -132,23 +132,10 @@ FuncError Student::addStudent(std::optional<std::string> name) {
             return FuncError::PREPARE_FAILED;
         }
 
-        sqlite3_bind_int(stmt, 5, studentId);
+        sqlite3_bind_int(stmt, 2, studentId);
     }
 
-    else {
-
-        std::string sql_insert = R"(INSERT INTO Students (Id, Groups, Name, Login, TG_id) 
-                                 VALUES ((SELECT max(Id) from Students) + 1, ?, ?, ?, ?))";
-
-        if (sqlite3_prepare_v2(db.get_conn(), sql_insert.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
-            return FuncError::PREPARE_FAILED;
-        }
-    }
-
-    sqlite3_bind_int(stmt, 1, Student::group_name);
-    sqlite3_bind_text(stmt, 2, Student::Name.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 3, Student::login.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 4, Student::username_tg.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 1, Student::username_tg.c_str(), -1, SQLITE_STATIC);
 
     if (sqlite3_step(stmt) != SQLITE_DONE) {
         sqlite3_finalize(stmt);

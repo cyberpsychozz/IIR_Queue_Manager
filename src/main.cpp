@@ -84,7 +84,27 @@ int main() {
                 case (FuncError::NOT_FOUND):
                     // TODO регистрация
                     bot.getApi().answerCallbackQuery(query->id, "Вас нет в списке студентов!");
-                    return;
+                    bot.getApi().sendMessage(chatId, "Если у вас нет логина, обратитесь к администраторам.");
+                    bot.getApi().sendMessage(chatId, "Если у вас есть логин, введите его:");
+                    bot.getEvents().onAnyMessage([&bot](TgBot::Message::Ptr message){
+                        Student student;
+                        std::string login = message->text;
+                        std::string id = std::to_string(message ->from-> id);
+                        int64_t chatId= message->chat->id;
+                        student.setUsernameTg(id);
+                        auto res = student.addStudent(login);
+                        switch(res){
+                            case(FuncError::OK):{
+                                bot.getApi().sendMessage(chatId, "Поздравляю, теперь ты есть в бд и твои данные утекут в даркнет");
+                                return;
+                            }
+                            case(FuncError::NOT_FOUND):{
+                                bot.getApi().sendMessage(chatId, "Ты не достоин(можешь попробовать ещё раз, правда все твои попытки тщетны), нажми старт еще раз, лох");
+                                return;
+                            }
+                        }
+                    });
+                        
 
                 // Ошибки запроса
                 default:
