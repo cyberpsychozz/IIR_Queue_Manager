@@ -137,6 +137,8 @@ TgBot::InlineKeyboardMarkup::Ptr createQueueControls(int subjectId, bool isInQue
     
     row.push_back(createBtn("Обновить ⟳", "view_" + sId)); 
 
+    row.push_back(createBtn("Сдвиг на 1 позицию назад", "skip_" + sId));
+
     keyboard->inlineKeyboard.push_back(row);
     
     // Кнопка "Назад" отдельной строкой

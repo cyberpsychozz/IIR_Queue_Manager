@@ -178,6 +178,9 @@ int main() {
         } else if (StringTools::startsWith(data, "leave_")) {
             action = "leave";
             subj.setId(std::stoi(data.substr(6)));
+        } else if (StringTools::startsWith(data, "skip_")){
+            action = "skip";
+            subj.setId(std::stoi(data.substr(5)));
         }
 
         if (subj.getId() > 0) {
@@ -202,6 +205,11 @@ int main() {
                     auto res = queue.give_up(dbStudentId);
                     if (res == FuncError::OK) alertText = "Вы покинули очередь.";
                     else alertText = "Ошибка выхода.";
+                }
+                else if (action == "skip") {
+                    auto res = queue.skip(dbStudentId);
+                    if (res == FuncError::OK) alertText = "Вы сдвинулись 1 позицию назад.";
+                    else alertText = "Ошибка сдвига.";
                 }
 
                 int studentPosition = -1;

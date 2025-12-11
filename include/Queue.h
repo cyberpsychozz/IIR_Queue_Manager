@@ -15,7 +15,7 @@ public:
     FuncResult<int> push(int student_id);
     FuncError pop();
     FuncError swap(int pos1, int pos2);
-    FuncError skip();
+    FuncError skip(int student_id);
     FuncError give_up(int student_id);
 
     FuncResult<int> getPosition(int student_id) const;

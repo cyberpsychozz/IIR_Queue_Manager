@@ -142,8 +142,13 @@ FuncError Queue::swap(int pos1, int pos2) {
 }
 
 // Пропуск одного человека вперёд
-FuncError Queue::skip(){
-    return swap(1, 2);
+FuncError Queue::skip(int student_id){
+    auto pos_res = getPosition(student_id);
+    if (pos_res.first != FuncError::OK || !pos_res.second.has_value())
+        return FuncError::NOT_FOUND;
+
+    int pos = pos_res.second.value();
+    return swap(pos, pos+1);
 }
 
  // Удаление из очереди по желанию Студента
