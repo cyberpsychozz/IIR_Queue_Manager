@@ -6,22 +6,7 @@
 #include <string>
 #include <sstream>
 
-volatile std::sig_atomic_t gSignalStatus = 0;
-void signal_handler(int signal) { gSignalStatus = signal; }
-//TODO Раскидать группы отдельно
-int main() {
-    const char* token = std::getenv("BOT_TOKEN");
-    if (!token) {
-        std::cerr << "ОШИБКА: переменная BOT_TOKEN не установлена!\n";
-        return 1;
-    }
-
-    TgBot::Bot bot(token);
-
-    auto& db = Database::getInstance("/data/bot.db");
-    if (!db.open()) return 1;
-    
-    // start
+void start_msg (TgBot::Bot &bot) {
     bot.getEvents().onCommand("start", [&bot](TgBot::Message::Ptr message) {
         TgBot::InlineKeyboardMarkup::Ptr keyboard = std::make_shared<TgBot::InlineKeyboardMarkup>();
         
@@ -34,8 +19,9 @@ int main() {
             "Привет! Я бот очередей ИИР.\nВыберите вашу роль:", 
             nullptr, nullptr, keyboard);
     });
+}
 
-    // Обработка нажатий на кнопки
+void any_msg (TgBot::Bot &bot) {
     bot.getEvents().onCallbackQuery([&bot](TgBot::CallbackQuery::Ptr query) {
         std::string data = query->data;
         int64_t chatId = query->message->chat->id;
@@ -86,20 +72,19 @@ int main() {
                     bot.getApi().answerCallbackQuery(query->id, "Вас нет в списке студентов!");
                     bot.getApi().sendMessage(chatId, "Если у вас нет логина, обратитесь к администраторам.");
                     bot.getApi().sendMessage(chatId, "Если у вас есть логин, введите его:");
-                    bot.getEvents().onAnyMessage([&bot](TgBot::Message::Ptr message){
+                    bot.getEvents().onAnyMessage([&bot, query](TgBot::Message::Ptr message){
                         std::string login = message->text;
-                        std::string id = std::to_string(message ->from-> id);
+                        std::string id = std::to_string(message->from-> id);
                         int64_t chatId= message->chat->id;
                         auto res = registrate(login, id);
                         switch(res){
-                            case(FuncError::OK):{
-                                bot.getApi().sendMessage(chatId, "Поздравляю, теперь ты есть в бд и твои данные утекут в даркнет");
-                                return;
-                            }
-                            case(FuncError::NOT_FOUND):{
-                                bot.getApi().sendMessage(chatId, "Ты не достоин(можешь попробовать ещё раз, правда все твои попытки тщетны)");
-                                return;
-                            }
+                            case(FuncError::OK):
+                                bot.getApi().answerCallbackQuery(query->id, "Вы успешно авторизованы");
+                                return 3;
+                            
+                            case(FuncError::NOT_FOUND):
+                                bot.getApi().answerCallbackQuery(query->id, "Некорректный логин");
+                                return 3;
                         }
                     });
 
@@ -161,7 +146,7 @@ int main() {
                         auto res = registrate(login, id, true);
                         switch(res){
                             case(FuncError::OK):{
-                                bot.getApi().sendMessage(chatId, "Вы успешно зарегистрированы");
+                                bot.getApi().sendMessage(chatId, "Вы успешно авторизованы");
                                 return;
                             }
                             case(FuncError::NOT_FOUND):{
@@ -298,10 +283,25 @@ int main() {
             }
         }
     });
+}
 
-    bot.getEvents().onAnyMessage([&bot](TgBot::Message::Ptr message) {
-        if (StringTools::startsWith(message->text, "/start")) return;
-    });
+volatile std::sig_atomic_t gSignalStatus = 0;
+void signal_handler(int signal) { gSignalStatus = signal; }
+//TODO Раскидать группы отдельно
+int main() {
+    const char* token = std::getenv("BOT_TOKEN");
+    if (!token) {
+        std::cerr << "ОШИБКА: переменная BOT_TOKEN не установлена!\n";
+        return 1;
+    }
+
+    TgBot::Bot bot(token);
+
+    auto& db = Database::getInstance("/data/bot.db");
+    if (!db.open()) return 1;
+    
+    start_msg(bot);
+    any_msg(bot);
 
     std::signal(SIGINT, signal_handler);
     std::signal(SIGTERM, signal_handler);
@@ -312,7 +312,7 @@ int main() {
         std::cout << "Нажми Ctrl+C для остановки\n";
         fflush(stdout);
 
-        TgBot::TgLongPoll longPoll(bot);
+        TgBot::TgLongPoll longPoll(bot, 1000, 0.1);
         while (gSignalStatus == 0) {
             try {
                 longPoll.start();
