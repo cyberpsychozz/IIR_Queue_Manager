@@ -1,5 +1,19 @@
 #include <TG_Bot.h>
 
+// Меню приветствия и выбора роли
+void startMenu(TgBot::Bot& bot, int64_t chatId) {
+    TgBot::InlineKeyboardMarkup::Ptr keyboard = std::make_shared<TgBot::InlineKeyboardMarkup>();
+    
+    std::vector<TgBot::InlineKeyboardButton::Ptr> row;
+    row.push_back(createBtn("Студент", "role_student"));
+    row.push_back(createBtn("Преподаватель", "role_teacher"));
+    keyboard->inlineKeyboard.push_back(row);
+
+    bot.getApi().sendMessage(chatId, 
+        "Привет! Я бот очередей ИИР.\nВыберите вашу роль:", 
+        nullptr, nullptr, keyboard);
+}
+
 // Возвращает студента по его TG Id
 // Если студент не найден возвращает FuncError::NOT_FOUND
 FuncResult <Student> studentByTGID (const std::string& TG_id) {
@@ -154,7 +168,7 @@ TgBot::InlineKeyboardMarkup::Ptr createTeacherQueueControls(int subjectId) {
 
     // 1 строка
     std::vector<TgBot::InlineKeyboardButton::Ptr> row;
-    row.push_back(createBtn("Обновить ⟳", "view_" + sId)); 
+    row.push_back(createBtn("Обновить ⟳", "tview_" + sId)); 
     keyboard->inlineKeyboard.push_back(row);
     
     // 2 строка
