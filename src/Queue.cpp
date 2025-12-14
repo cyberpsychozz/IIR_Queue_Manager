@@ -260,6 +260,7 @@ FuncResult<std::vector<Student>>Queue::getQueue() const{
         FROM Queues Q 
         JOIN Students S ON S.Id = Q.Student_Id 
         WHERE Q.Subject_Id = ?
+        ORDER BY Position ASC
     )";
 
     sqlite3_stmt* stmt = nullptr;
