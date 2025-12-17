@@ -183,6 +183,11 @@ void setup_handlers(TgBot::Bot &bot) {
             subj.setId(std::stoi(data.substr(6)));
             isTeacher = true;
         }
+        else if(StringTools::startsWith(data, "tcomment_")){
+            action = "comment";
+            subj.setId(std::stoi(data.substr(9)));
+            isTeacher = true;
+        }
         else if (StringTools::startsWith(data, "view_")) {
             action = "view";
             subj.setId(std::stoi(data.substr(5)));
@@ -206,7 +211,8 @@ void setup_handlers(TgBot::Bot &bot) {
             auto teacherRes = teacherByTGID(tgId);
             if (teacherRes.first == FuncError::OK) {
                 auto qRes = queue.getQueue();
-                std::string response = "Очередь студентов по предмету *" + subj.getName() + "*:\n\n";
+                std::string response = "Очередь студентов по предмету *" + subj.getName() + "*:\n";
+                response += "Комментарий преподавателя: *" + subj.getComment() + "*\n\n";
 
                 if (qRes.first == FuncError::OK && qRes.second.has_value()) {
                     auto list = qRes.second.value();
@@ -229,6 +235,14 @@ void setup_handlers(TgBot::Bot &bot) {
 
                 try { bot.getApi().answerCallbackQuery(query->id); }
                 catch(const std::exception& e) { std::cerr << e.what() << '\n'; }
+
+                if (action == "comment"){
+                    auto forceReply = std::make_shared<TgBot::ForceReply>();
+                    forceReply->forceReply = true;
+                    forceReply->selective = true;
+                    std::string text = "Введите комментарий для предмета " + subj.getName() + " ответом на данное сообщение:";
+                    bot.getApi().sendMessage(chatId, text, nullptr, nullptr, forceReply, "Markdown");                    
+                }
             } 
             else {
                 try { bot.getApi().answerCallbackQuery(query->id, "Ошибка доступа.", true); }
@@ -269,6 +283,7 @@ void setup_handlers(TgBot::Bot &bot) {
                 }
 
                 std::string response = "Очередь по предмету *" + subj.getName() + "*:\n\n";
+                std::string comment = "Комментарий преподавателя: *" + subj.getComment() + "*\n\n";
                 
                 if (isInQueue) {
                     response = " *Ваша позиция: " + std::to_string(studentPosition) + "*\n\n" + response;
@@ -344,6 +359,33 @@ void setup_handlers(TgBot::Bot &bot) {
                 else 
                     askForLogin(bot, chatId, message->replyToMessage->messageId, false, "Некорректный логин студента");
             }
+        }else if (message->replyToMessage && message->replyToMessage->text.find("комментарий") != std::string::npos){
+            handled = true;
+            std::string tgId = std::to_string(message->from->id);
+            int64_t chatId = message->chat->id;
+            std::string comm = message->text;
+            std::string subjName = message->replyToMessage->text.substr(33, message->replyToMessage->text.size() - 33 - 32);
+
+            auto res = teacherByTGID(tgId);
+            if(res.first == FuncError::OK){
+                auto subjects = res.second.value().getSubjects();
+                if (!subjects.first != FuncError::OK){
+                    std::cerr << subjects.first;
+                }
+                auto subjects = subjects.second.value();
+                auto it = std::find_if(
+                    subjects.begin(),
+                    subjects.end(),
+                    [&](const Subject& s) {
+                        return s.getName() == subjName;
+                    }
+                );
+                
+                it->setComment(comm);
+                it->update();   
+                
+            }  
+
         }
 
         // Если сообщение не было обработано, удаляем его

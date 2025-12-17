@@ -12,27 +12,31 @@ private:
     int id;
     int teacher_id;
     std::string name;
+    std::string comment;
 
 public:
     // Constructors
 
     Subject();
-    Subject(int subject_id, std::string name, int teacher_id);
+    Subject(int subject_id, std::string name, int teacher_id, std::string comment);
 
     // Getters
 
     int getId() const;
     int getTeacherId() const;
     const std::string& getName() const;
+    const std::string& getComment() const;
 
     // Setters
 
     void setId(int newId);
     void setTeacherId(int newTeacherId);
     void setName(const std::string& newName);
+    void setComment(const std::string& newComment);
 
     // Functions
     FuncError sync();
+    FuncError update();
     
     FuncResult<Teacher> getTeacher() const;
     FuncResult<std::vector<Seminar>> getClasses(int group) const;

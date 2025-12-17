@@ -1,21 +1,23 @@
 #include "Subject.h"
 
-Subject::Subject() : id(0), name(""), teacher_id(0) {}
+Subject::Subject() : id(0), name(""), teacher_id(0), comment("") {}
 
-Subject::Subject(int subject_id, std::string name, int teacher_id)
-    : id(subject_id), name(name), teacher_id(teacher_id) {}
+Subject::Subject(int subject_id, std::string name, int teacher_id, std::string comment)
+    : id(subject_id), name(name), teacher_id(teacher_id), comment(comment) {}
 
 // Getters
 
 int Subject::getId() const { return id; }
 int Subject::getTeacherId() const { return teacher_id; }
 const std::string& Subject::getName() const { return name; }
+const std::string& Subject::getComment() const {return comment; }
 
 // Setters
 
 void Subject::setId(int newId) { id = newId; }
 void Subject::setTeacherId(int newTeacherId) { teacher_id = newTeacherId; }
 void Subject::setName(const std::string& newName) { name = newName; }
+void Subject::setComment(const std::string& newComment) { name = newComment; }
 
 // Functions
 
@@ -58,6 +60,32 @@ FuncError Subject::sync() {
         return FuncError::STEP_FAILED;
     }
     
+    sqlite3_finalize(stmt);
+
+    return FuncError::OK;
+}
+
+FuncError Subject::update(){
+    auto &db = Database::getInstance();
+
+    // Проверяем что соединение открыто
+    if (!db.get_conn()) {
+        return FuncError::DB_NOT_OPEN;
+    }
+
+    const char* sql =  R"(
+        UPDATE Subjects
+        SET (Comment) = (?)
+        WHERE Id = ?)";
+
+    sqlite3_stmt* stmt = nullptr;
+    auto rc = sqlite3_prepare_v2(db.get_conn(), sql, -1, &stmt, nullptr);
+
+    sqlite3_bind_text(stmt, 1, comment.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_int(stmt, 2, id);
+
+    rc = sqlite3_step(stmt);
+
     sqlite3_finalize(stmt);
 
     return FuncError::OK;
