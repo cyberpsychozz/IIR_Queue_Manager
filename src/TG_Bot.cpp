@@ -6,8 +6,10 @@ void startMenu(TgBot::Bot& bot, int64_t chatId) {
     
     std::vector<TgBot::InlineKeyboardButton::Ptr> row;
     row.push_back(createBtn("Студент", "role_student"));
-    row.push_back(createBtn("Преподаватель", "role_teacher"));
     keyboard->inlineKeyboard.push_back(row);
+    std::vector<TgBot::InlineKeyboardButton::Ptr> row2;
+    row2.push_back(createBtn("Преподаватель", "role_teacher"));
+    keyboard->inlineKeyboard.push_back(row2);
 
     bot.getApi().sendMessage(chatId, 
         "Привет! Я бот очередей ИИР.\nВыберите вашу роль:", 
@@ -138,12 +140,14 @@ TgBot::InlineKeyboardMarkup::Ptr createKeyboard(const std::vector<std::pair<std:
 TgBot::InlineKeyboardMarkup::Ptr createQueueControls(int subjectId, bool isInQueue) {
     auto keyboard = std::make_shared<TgBot::InlineKeyboardMarkup>();
     std::vector<TgBot::InlineKeyboardButton::Ptr> row;
+    std::vector<TgBot::InlineKeyboardButton::Ptr> rowMid;
 
     std::string sId = std::to_string(subjectId);
     
     if (isInQueue) {
         // Если студент в очереди, показываем "Выйти"
         row.push_back(createBtn("Выйти", "leave_" + sId));
+        rowMid.push_back(createBtn("Сдвиг на 1 позицию вниз", "skip_" + sId));
     } else {
         // Иначе показываем "Записаться"
         row.push_back(createBtn("Записаться", "join_" + sId));
@@ -151,10 +155,11 @@ TgBot::InlineKeyboardMarkup::Ptr createQueueControls(int subjectId, bool isInQue
     
     row.push_back(createBtn("Обновить ⟳", "view_" + sId)); 
 
-    row.push_back(createBtn("Сдвиг на 1 позицию назад", "skip_" + sId));
-
     keyboard->inlineKeyboard.push_back(row);
     
+    if (!rowMid.empty())
+        keyboard->inlineKeyboard.push_back(rowMid);
+
     // Кнопка "Назад" отдельной строкой
     std::vector<TgBot::InlineKeyboardButton::Ptr> rowBack;
     rowBack.push_back(createBtn("« К списку предметов", "role_student"));

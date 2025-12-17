@@ -146,6 +146,8 @@ FuncError Queue::skip(int student_id){
     auto pos_res = getPosition(student_id);
     if (pos_res.first != FuncError::OK || !pos_res.second.has_value())
         return FuncError::NOT_FOUND;
+    else if (pos_res.second.value() == getLen().second)
+        return FuncError::INVALID_POSITION;
 
     int pos = pos_res.second.value();
     return swap(pos, pos+1);
