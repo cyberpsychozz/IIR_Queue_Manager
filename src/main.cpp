@@ -206,7 +206,8 @@ void setup_handlers(TgBot::Bot &bot) {
             auto teacherRes = teacherByTGID(tgId);
             if (teacherRes.first == FuncError::OK) {
                 auto qRes = queue.getQueue();
-                std::string response = "Очередь студентов по предмету *" + subj.getName() + "*:\n\n";
+                std::string response = "Очередь студентов по предмету *" + subj.getName() + ":*\n\n";
+                // response += "Группы: " + subj.getGroups() + "\n\n"
 
                 if (qRes.first == FuncError::OK && qRes.second.has_value()) {
                     auto list = qRes.second.value();
