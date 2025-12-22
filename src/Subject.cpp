@@ -1,21 +1,23 @@
 #include "Subject.h"
 
-Subject::Subject() : id(0), name(""), teacher_id(0) {}
+Subject::Subject() : id(0), name(""), teacher_id(0), comment("") {}
 
-Subject::Subject(int subject_id, std::string name, int teacher_id)
-    : id(subject_id), name(name), teacher_id(teacher_id) {}
+Subject::Subject(int subject_id, std::string name, int teacher_id, std::string comment)
+    : id(subject_id), name(name), teacher_id(teacher_id), comment(comment) {}
 
 // Getters
 
 int Subject::getId() const { return id; }
 int Subject::getTeacherId() const { return teacher_id; }
 const std::string& Subject::getName() const { return name; }
+const std::string& Subject::getComment() const {return comment; }
 
 // Setters
 
 void Subject::setId(int newId) { id = newId; }
 void Subject::setTeacherId(int newTeacherId) { teacher_id = newTeacherId; }
 void Subject::setName(const std::string& newName) { name = newName; }
+void Subject::setComment(const std::string& newComment) { comment = newComment; }
 
 // Functions
 
@@ -46,12 +48,50 @@ FuncError Subject::sync() {
         const unsigned char* namebd = sqlite3_column_text(stmt.get(), 1);
         name = std::string(reinterpret_cast<const char*>(namebd));
         teacher_id = sqlite3_column_int(stmt.get(), 2);
+        const unsigned char* comm = sqlite3_column_text(stmt.get(), 4);
+        comment = comm ? std::string(reinterpret_cast<const char*>(comm)) : "";
     } 
     // Не вернулся результат    
     else if (rc == SQLITE_DONE)
         return FuncError::NOT_FOUND;
     // Вернулась ошибка 
-    else return FuncError::STEP_FAILED;
+    else {
+        return FuncError::STEP_FAILED;
+    }
+
+    return FuncError::OK;
+}
+
+FuncError Subject::updateComment(){
+    auto &db = Database::getInstance();
+
+    // Проверяем что соединение открыто
+    if (!db.get_conn()) {
+        return FuncError::DB_NOT_OPEN;
+    }
+
+    const char* sql =  R"(
+        UPDATE Subjects
+        SET Comment = ?
+        WHERE Id = ?)";
+
+    sqlite3_stmt* stmt = nullptr;
+    
+     if (sqlite3_prepare_v2(db.get_conn(), sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        if (stmt) sqlite3_finalize(stmt);
+        return FuncError::PREPARE_FAILED; 
+    }
+
+    sqlite3_bind_text(stmt, 1, comment.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_int(stmt, 2, id);
+
+    if (sqlite3_step(stmt) != SQLITE_DONE) {
+        sqlite3_finalize(stmt);
+        std::cerr<<"erroraasdfafafa\n";
+        return FuncError::STEP_FAILED;
+    }
+
+    sqlite3_finalize(stmt);
 
     return FuncError::OK;
 }

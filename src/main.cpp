@@ -135,7 +135,8 @@ void setup_handlers(TgBot::Bot &bot) {
         }
     });
 
-    bot.getEvents().onCallbackQuery([&bot](TgBot::CallbackQuery::Ptr query) {
+    bot.getEvents().onCallbackQuery([botPtr = std::make_shared<std::reference_wrapper<TgBot::Bot>>(bot)](TgBot::CallbackQuery::Ptr query) {
+        TgBot::Bot& bot = botPtr->get();
         std::string data = query->data;
         int64_t chatId = query->message->chat->id;
         int64_t userId = query->from->id; 
@@ -205,11 +206,32 @@ void setup_handlers(TgBot::Bot &bot) {
         subj.setId(0);
         bool isTeacher = false;
 
-        if (StringTools::startsWith(data, "tview_")) { action = "view"; subj.setId(std::stoi(data.substr(6))); isTeacher = true; }
-        else if (StringTools::startsWith(data, "view_")) { action = "view"; subj.setId(std::stoi(data.substr(5))); } 
-        else if (StringTools::startsWith(data, "join_")) { action = "join"; subj.setId(std::stoi(data.substr(5))); } 
-        else if (StringTools::startsWith(data, "leave_")) { action = "leave"; subj.setId(std::stoi(data.substr(6))); } 
-        else if (StringTools::startsWith(data, "skip_")){ action = "skip"; subj.setId(std::stoi(data.substr(5))); }
+        if (StringTools::startsWith(data, "tview_")) {
+            action = "tview"; 
+            subj.setId(std::stoi(data.substr(6)));
+            isTeacher = true;
+            // std::cout << "tview";
+        }
+        else if(StringTools::startsWith(data, "tcomment_")){
+            action = "comment";
+            subj.setId(std::stoi(data.substr(9)));
+            isTeacher = true;
+        }
+        else if (StringTools::startsWith(data, "view_")) {
+            action = "view";
+            subj.setId(std::stoi(data.substr(5)));
+        } 
+        else if (StringTools::startsWith(data, "join_")) {
+            action = "join";
+            subj.setId(std::stoi(data.substr(5)));
+        } 
+        else if (StringTools::startsWith(data, "leave_")) {
+            action = "leave";
+            subj.setId(std::stoi(data.substr(6)));
+        } else if (StringTools::startsWith(data, "skip_")){
+            action = "skip";
+            subj.setId(std::stoi(data.substr(5)));
+        }
 
         Queue queue(subj.getId());
         subj.sync();
@@ -218,8 +240,10 @@ void setup_handlers(TgBot::Bot &bot) {
             auto teacherRes = teacherByTGID(tgId);
             if (teacherRes.first == FuncError::OK) {
                 auto qRes = queue.getQueue();
-                std::string response = "Очередь студентов по предмету *" + subj.getName() + ":*\n\n";
-                // response += "Группы: " + subj.getGroups() + "\n\n"
+                std::string response = "Очередь студентов по предмету *" + subj.getName() + "*:\n";
+
+                if(!subj.getComment().empty())
+                    response += "Комментарий преподавателя: *" + subj.getComment() + "*\n\n";
 
                 if (qRes.first == FuncError::OK && qRes.second.has_value()) {
                     auto list = qRes.second.value();
@@ -242,6 +266,14 @@ void setup_handlers(TgBot::Bot &bot) {
 
                 try { bot.getApi().answerCallbackQuery(query->id); }
                 catch(const std::exception& e) { std::cerr << e.what() << '\n'; }
+
+                if (action == "comment"){
+                    auto forceReply = std::make_shared<TgBot::ForceReply>();
+                    forceReply->forceReply = true;
+                    forceReply->selective = true;
+                    std::string text = "Введите комментарий для предмета " + subj.getName() + " ответом на данное сообщение:";
+                    bot.getApi().sendMessage(chatId, text, nullptr, nullptr, forceReply);                    
+                }
             } 
             else {
                 try { bot.getApi().answerCallbackQuery(query->id, "Ошибка доступа.", true); }
@@ -284,6 +316,8 @@ void setup_handlers(TgBot::Bot &bot) {
                 }
 
                 std::string response = "Очередь по предмету *" + subj.getName() + "*:\n\n";
+                if(!subj.getComment().empty())
+                    response += "Комментарий преподавателя: *" + subj.getComment() + "*\n\n";
                 
                 if (isInQueue) {
                     response = " *Ваша позиция: " + std::to_string(studentPosition) + "*\n\n" + response;
@@ -322,7 +356,10 @@ void setup_handlers(TgBot::Bot &bot) {
     });
 
     // Автоудаление сообщений пользователя
-    bot.getEvents().onAnyMessage([&bot](TgBot::Message::Ptr message) {
+    bot.getEvents().onAnyMessage(
+        [botPtr = std::make_shared<std::reference_wrapper<TgBot::Bot>>(bot)]
+        (TgBot::Message::Ptr message) {
+        TgBot::Bot& bot = botPtr->get();
 
         bool handled = false;
 
@@ -342,7 +379,7 @@ void setup_handlers(TgBot::Bot &bot) {
             try { bot.getApi().deleteMessage(chatId, message->messageId); } catch (...) {}
 
             if (res == FuncError::OK) {
-                // Удаляем запрос бота
+                // Удаляем запрос ботаf
                 try { bot.getApi().deleteMessage(chatId, message->replyToMessage->messageId); } catch (...) {}
                 
                 // Показываем меню
@@ -361,6 +398,48 @@ void setup_handlers(TgBot::Bot &bot) {
                 else 
                     askForLogin(bot, chatId, message->replyToMessage->messageId, false, "Некорректный логин студента");
             }
+        }else if (message->replyToMessage && message->replyToMessage->text.find("комментарий") != std::string::npos){
+            
+            handled = true;
+            std::string tgId = std::to_string(message->from->id);
+            int64_t chatId = message->chat->id;
+            std::string comm = message->text;
+            std::string subjName = message->replyToMessage->text.substr(62, message->replyToMessage->text.size() - 62 -53);
+
+            auto res = teacherByTGID(tgId);
+            if(res.first == FuncError::OK){
+                auto subjects = res.second.value().getSubjects();
+                if (subjects.first != FuncError::OK){
+                    std::cerr << subjects.first;
+                }
+
+                auto& subj = subjects.second.value();
+         
+                Subject s;
+                for (Subject subay:subj){
+                    if(subay.getName()==subjName){
+                        s.setId(subay.getId());
+                        break;
+                    }
+                }
+                s.setComment(comm);
+                
+                auto err = s.updateComment();
+        
+                if(err == FuncError::OK) {
+                    try { bot.getApi().deleteMessage(chatId, message->messageId); } 
+                    catch (...) {}
+                    
+                    try { bot.getApi().deleteMessage(chatId, message->replyToMessage->messageId); } 
+                    catch (...) {}
+                    
+                    auto tRes = teacherByTGID(tgId);
+                    if (tRes.first == FuncError::OK) {
+                        displayTeacherSubjects(bot, chatId, tRes.second.value());
+                    }}
+                
+            }  
+
         }
 
         // Если сообщение не было обработано, удаляем его
@@ -381,13 +460,22 @@ int main() {
     const char* token = std::getenv("BOT_TOKEN");
 
     TgBot::Bot bot(token);
+    std::cout<<"1. Bot setup completed"<<std::endl;
+
     auto& db = Database::getInstance("/data/bot.db");
     if (!db.open()) return 1;
+    std::cout<<"2. db setup completed"<<std::endl;
     
     setup_handlers(bot);
+    std::cout<<"3. Handlers setup completed"<<std::endl;
 
     std::signal(SIGINT, signal_handler);
     std::signal(SIGTERM, signal_handler);
+
+    // Subject subj;
+    // subj.setId(1);
+    // subj.setComment("Артём лох ебаный");
+    // subj.updateComment();
 
     try {
         auto me = bot.getApi().getMe();
@@ -397,6 +485,7 @@ int main() {
         TgBot::TgLongPoll longPoll(bot);
         while (gSignalStatus == 0) {
             try {
+                
                 longPoll.start();
             } catch (const std::exception& e) {
                 std::string error_msg = e.what();
@@ -405,9 +494,12 @@ int main() {
                     error_msg.find("Forbidden") != std::string::npos ||
                     error_msg.find("timed out") != std::string::npos) {
                     
-                    std::cerr << "API Error: " << error_msg << std::endl;
-                } else {
-                    std::cerr << "System Error: " << error_msg << std::endl;
+                    std::cerr << "Ошибка API (Timeout/Bad Request): " << error_msg << std::endl;
+                } else  if (error_msg.find("bot was blocked by the user") != std::string::npos) {
+                    std::cerr << "Пользователь заблокировал бота, пропускаю: "
+                    << error_msg << std::endl;
+                } else{
+                    std::cerr << "Общая ошибка (std::exception): " << error_msg << std::endl;
                 }
             } catch (...) {
                 std::cerr << "Неизвестная ошибка" << std::endl;
@@ -416,6 +508,9 @@ int main() {
         std::cout << "\nОстановка бота...\n";
     } catch (const std::exception& e) {
         std::cerr << "Критическая ошибка при запуске: " << e.what() << std::endl;
+        return 1;
+    } catch (...) {
+        std::cerr << "Неизвестная критическая ошибка" << std::endl;
         return 1;
     }
     
