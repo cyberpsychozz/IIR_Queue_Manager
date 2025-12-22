@@ -47,19 +47,17 @@ FuncError Subject::sync() {
     if (rc == SQLITE_ROW) {
         const unsigned char* namebd = sqlite3_column_text(stmt.get(), 1);
         name = std::string(reinterpret_cast<const char*>(namebd));
-        teacher_id = sqlite3_column_int(stmt, 2);
-        comment = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4)));
+        teacher_id = sqlite3_column_int(stmt.get(), 2);
+        const unsigned char* comm = sqlite3_column_text(stmt.get(), 4);
+        comment = comm ? std::string(reinterpret_cast<const char*>(comm)) : "";
     } 
     // Не вернулся результат    
     else if (rc == SQLITE_DONE)
         return FuncError::NOT_FOUND;
     // Вернулась ошибка 
     else {
-        sqlite3_finalize(stmt);
         return FuncError::STEP_FAILED;
     }
-    
-    sqlite3_finalize(stmt);
 
     return FuncError::OK;
 }
@@ -78,13 +76,18 @@ FuncError Subject::updateComment(){
         WHERE Id = ?)";
 
     sqlite3_stmt* stmt = nullptr;
-    auto rc = sqlite3_prepare_v2(db.get_conn(), sql, -1, &stmt, nullptr);
+    
+     if (sqlite3_prepare_v2(db.get_conn(), sql, -1, &stmt, nullptr) != SQLITE_OK) {
+        if (stmt) sqlite3_finalize(stmt);
+        return FuncError::PREPARE_FAILED; 
+    }
 
     sqlite3_bind_text(stmt, 1, comment.c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_int(stmt, 2, id);
 
     if (sqlite3_step(stmt) != SQLITE_DONE) {
         sqlite3_finalize(stmt);
+        std::cerr<<"erroraasdfafafa\n";
         return FuncError::STEP_FAILED;
     }
 

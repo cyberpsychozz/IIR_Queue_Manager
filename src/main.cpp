@@ -210,7 +210,7 @@ void setup_handlers(TgBot::Bot &bot) {
             action = "tview"; 
             subj.setId(std::stoi(data.substr(6)));
             isTeacher = true;
-            std::cout << "tview";
+            // std::cout << "tview";
         }
         else if(StringTools::startsWith(data, "tcomment_")){
             action = "comment";
@@ -241,7 +241,9 @@ void setup_handlers(TgBot::Bot &bot) {
             if (teacherRes.first == FuncError::OK) {
                 auto qRes = queue.getQueue();
                 std::string response = "Очередь студентов по предмету *" + subj.getName() + "*:\n";
-                response += "Комментарий преподавателя: *" + subj.getComment() + "*\n\n";
+
+                if(!subj.getComment().empty())
+                    response += "Комментарий преподавателя: *" + subj.getComment() + "*\n\n";
 
                 if (qRes.first == FuncError::OK && qRes.second.has_value()) {
                     auto list = qRes.second.value();
@@ -270,7 +272,7 @@ void setup_handlers(TgBot::Bot &bot) {
                     forceReply->forceReply = true;
                     forceReply->selective = true;
                     std::string text = "Введите комментарий для предмета " + subj.getName() + " ответом на данное сообщение:";
-                    bot.getApi().sendMessage(chatId, text, nullptr, nullptr, forceReply, "Markdown");                    
+                    bot.getApi().sendMessage(chatId, text, nullptr, nullptr, forceReply);                    
                 }
             } 
             else {
@@ -360,8 +362,6 @@ void setup_handlers(TgBot::Bot &bot) {
 
         bool handled = false;
 
-        std::cout<<"nigaa";
-
         // Проверяем, является ли сообщение ответом на запрос логина
         if (message->replyToMessage && message->replyToMessage->text.find("логин") != std::string::npos) {
 
@@ -403,46 +403,41 @@ void setup_handlers(TgBot::Bot &bot) {
             std::string tgId = std::to_string(message->from->id);
             int64_t chatId = message->chat->id;
             std::string comm = message->text;
-            std::string subjName = message->replyToMessage->text.substr(33, message->replyToMessage->text.size() - 33 - 32);
-            
-            std::cout << "nigga";
+            std::string subjName = message->replyToMessage->text.substr(62, message->replyToMessage->text.size() - 62 -53);
 
-            // auto res = teacherByTGID(tgId);
-            // if(res.first == FuncError::OK){
-                
-            //     auto subjects = res.second.value().getSubjects();
-            //     if (subjects.first != FuncError::OK){
-            //         std::cerr << subjects.first;
-            //     }
+            auto res = teacherByTGID(tgId);
+            if(res.first == FuncError::OK){
+                auto subjects = res.second.value().getSubjects();
+                if (subjects.first != FuncError::OK){
+                    std::cerr << subjects.first;
+                }
 
-            //     auto& subj = subjects.second.value();
+                auto& subj = subjects.second.value();
+         
+                Subject s;
+                for (Subject subay:subj){
+                    if(subay.getName()==subjName){
+                        s.setId(subay.getId());
+                        break;
+                    }
+                }
+                s.setComment(comm);
                 
-            //     auto it = std::find_if(
-            //         subj.begin(),
-            //         subj.end(),
-            //         [&](const Subject& s) {
-            //             return s.getName() == subjName;
-            //         }
-            //     );
-                
-            //     it->setComment(comm);
-            //     // it->updateComment();
-                
-            //     auto err = it->updateComment();
+                auto err = s.updateComment();
         
-            //     if(err == FuncError::OK) {
-            //         try { bot.getApi().deleteMessage(chatId, message->messageId); } 
-            //         catch (...) {}
+                if(err == FuncError::OK) {
+                    try { bot.getApi().deleteMessage(chatId, message->messageId); } 
+                    catch (...) {}
                     
-            //         try { bot.getApi().deleteMessage(chatId, message->replyToMessage->messageId); } 
-            //         catch (...) {}
+                    try { bot.getApi().deleteMessage(chatId, message->replyToMessage->messageId); } 
+                    catch (...) {}
                     
-            //         auto tRes = teacherByTGID(tgId);
-            //         if (tRes.first == FuncError::OK) {
-            //             displayTeacherSubjects(bot, chatId, tRes.second.value());
-            //         }}
+                    auto tRes = teacherByTGID(tgId);
+                    if (tRes.first == FuncError::OK) {
+                        displayTeacherSubjects(bot, chatId, tRes.second.value());
+                    }}
                 
-            // }  
+            }  
 
         }
 
