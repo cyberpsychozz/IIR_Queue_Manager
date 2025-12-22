@@ -35,7 +35,7 @@ FuncResult<std::vector<Subject>> Teacher::getSubjects() const {
     }
 
     const char* sql = R"(
-        SELECT Id, Name, Teacher_Id
+        SELECT Id, Name
         FROM Subjects
         WHERE Teacher_Id = ?;
     )";
@@ -51,18 +51,15 @@ FuncResult<std::vector<Subject>> Teacher::getSubjects() const {
 
     std::vector<Subject> subjects;
     Subject subj;
-    int id = 1;
     
     while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-
-        subj.setId(id);
-        subj.setTeacherId(sqlite3_column_int(stmt, 2));
+        subj.setId(sqlite3_column_int(stmt, 0));
+        subj.setTeacherId(id);
 
         const char* name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
         subj.setName(std::string(reinterpret_cast<const char*>(name)));
         
         subjects.push_back(subj);
-        ++id;
     }
 
     if (rc != SQLITE_DONE) {

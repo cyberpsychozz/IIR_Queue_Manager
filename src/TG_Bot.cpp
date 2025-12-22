@@ -11,9 +11,12 @@ void startMenu(TgBot::Bot& bot, int64_t chatId) {
     row2.push_back(createBtn("Преподаватель", "role_teacher"));
     keyboard->inlineKeyboard.push_back(row2);
 
+    try {
     bot.getApi().sendMessage(chatId, 
         "Привет! Я бот очередей ИИР.\nВыберите вашу роль:", 
         nullptr, nullptr, keyboard);
+    }
+    catch(const std::exception& e) { std::cerr << e.what() << '\n'; }
 }
 
 // Возвращает студента по его TG Id

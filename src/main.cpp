@@ -10,7 +10,10 @@ void displayStudentSubjects(TgBot::Bot& bot, int64_t chatId, const Student& stud
     auto subjsRes = student.getSubjects();
 
     if (subjsRes.first != FuncError::OK) {
-        bot.getApi().sendMessage(chatId, "Предметы для вашей группы не найдены.");
+        try {bot.getApi().sendMessage(chatId, "Предметы для вашей группы не найдены."); }
+        catch (const TgBot::TgException& e) {
+            std::cerr << "Не удалось отправить сообщение пользователю " << chatId << ": " << e.what() << std::endl;
+        }
         return;
     }
 
@@ -30,10 +33,16 @@ void displayStudentSubjects(TgBot::Bot& bot, int64_t chatId, const Student& stud
         try {
             bot.getApi().editMessageText(text, chatId, messageIdToEdit, "", "Markdown", nullptr, keyboard);
         } catch (...) {
-            bot.getApi().sendMessage(chatId, text, nullptr, nullptr, keyboard, "Markdown");
+            try {bot.getApi().sendMessage(chatId, text, nullptr, nullptr, keyboard, "Markdown");}
+            catch (const TgBot::TgException& e) {
+                std::cerr << "Не удалось отправить сообщение пользователю " << chatId << ": " << e.what() << std::endl;
+            }
         }
     } else {
-        bot.getApi().sendMessage(chatId, text, nullptr, nullptr, keyboard, "Markdown");
+        try {bot.getApi().sendMessage(chatId, text, nullptr, nullptr, keyboard, "Markdown");}
+        catch (const TgBot::TgException& e) {
+            std::cerr << "Не удалось отправить сообщение пользователю " << chatId << ": " << e.what() << std::endl;
+        }
     }
 }
 
@@ -41,7 +50,10 @@ void displayTeacherSubjects(TgBot::Bot& bot, int64_t chatId, const Teacher& teac
     auto subjsRes = teacher.getSubjects();
 
     if (subjsRes.first != FuncError::OK) {
-        bot.getApi().sendMessage(chatId, "Предметы не найдены.");
+        try {bot.getApi().sendMessage(chatId, "Предметы не найдены.");}
+        catch (const TgBot::TgException& e) {
+            std::cerr << "Не удалось отправить сообщение пользователю " << chatId << ": " << e.what() << std::endl;
+        }
         return;
     }
 
@@ -60,10 +72,16 @@ void displayTeacherSubjects(TgBot::Bot& bot, int64_t chatId, const Teacher& teac
         try {
             bot.getApi().editMessageText(text, chatId, messageIdToEdit, "", "Markdown", nullptr, keyboard);
         } catch (...) {
-            bot.getApi().sendMessage(chatId, text, nullptr, nullptr, keyboard, "Markdown");
+            try {bot.getApi().sendMessage(chatId, text, nullptr, nullptr, keyboard, "Markdown");}
+            catch (const TgBot::TgException& e) {
+                std::cerr << "Не удалось отправить сообщение пользователю " << chatId << ": " << e.what() << std::endl;
+            }
         }
     } else {
-        bot.getApi().sendMessage(chatId, text, nullptr, nullptr, keyboard, "Markdown");
+        try {bot.getApi().sendMessage(chatId, text, nullptr, nullptr, keyboard, "Markdown");}
+        catch (const TgBot::TgException& e) {
+            std::cerr << "Не удалось отправить сообщение пользователю " << chatId << ": " << e.what() << std::endl;
+        }
     }
 }
 
@@ -80,7 +98,10 @@ void askForLogin(TgBot::Bot &bot, int64_t chatId, int32_t messageIdToDelete, boo
         forceReply->forceReply = true;
         forceReply->selective = true;
 
-        bot.getApi().sendMessage(chatId, "Вас нет в списке " + roleText + ".\nДля авторизации введите ваш логин *ответом на это сообщение:*", nullptr, nullptr, forceReply, "Markdown");
+        try {bot.getApi().sendMessage(chatId, "Вас нет в списке " + roleText + ".\nДля авторизации введите ваш логин *ответом на это сообщение:*", nullptr, nullptr, forceReply, "Markdown");}
+        catch (const TgBot::TgException& e) {
+            std::cerr << "Не удалось отправить сообщение пользователю " << chatId << ": " << e.what() << std::endl;
+        }
     }
     else {
         TgBot::InlineKeyboardMarkup::Ptr keyboard = std::make_shared<TgBot::InlineKeyboardMarkup>();
@@ -97,14 +118,21 @@ void askForLogin(TgBot::Bot &bot, int64_t chatId, int32_t messageIdToDelete, boo
         row2.push_back(createBtn(cancelText, "back_to_start"));
         keyboard->inlineKeyboard.push_back(row2);
 
-        bot.getApi().sendMessage(chatId, "Логин не найден в базе " + roleText, nullptr, nullptr, keyboard);
+        try {bot.getApi().sendMessage(chatId, "Логин не найден в базе " + roleText, nullptr, nullptr, keyboard);} 
+        catch (const TgBot::TgException& e) {
+            std::cerr << "Не удалось отправить сообщение пользователю " << chatId << ": " << e.what() << std::endl;
+        }
     }
 }
 
 void setup_handlers(TgBot::Bot &bot) {
     // /start
     bot.getEvents().onCommand("start", [&bot](TgBot::Message::Ptr message) {
-        startMenu(bot, message->chat->id);
+        try {
+            startMenu(bot, message->chat->id);
+        } catch (const std::exception& e) {
+            std::cerr << "Ошибка в /start: " << e.what() << std::endl;
+        }
     });
 
     bot.getEvents().onCallbackQuery([&bot](TgBot::CallbackQuery::Ptr query) {
@@ -142,7 +170,6 @@ void setup_handlers(TgBot::Bot &bot) {
             return;
         }
 
-        // Студент
         if (data == "role_student") {
             auto res = studentByTGID(tgId);
             if (res.first == FuncError::OK) {
@@ -178,26 +205,11 @@ void setup_handlers(TgBot::Bot &bot) {
         subj.setId(0);
         bool isTeacher = false;
 
-        if (StringTools::startsWith(data, "tview_")) {
-            action = "view"; 
-            subj.setId(std::stoi(data.substr(6)));
-            isTeacher = true;
-        }
-        else if (StringTools::startsWith(data, "view_")) {
-            action = "view";
-            subj.setId(std::stoi(data.substr(5)));
-        } 
-        else if (StringTools::startsWith(data, "join_")) {
-            action = "join";
-            subj.setId(std::stoi(data.substr(5)));
-        } 
-        else if (StringTools::startsWith(data, "leave_")) {
-            action = "leave";
-            subj.setId(std::stoi(data.substr(6)));
-        } else if (StringTools::startsWith(data, "skip_")){
-            action = "skip";
-            subj.setId(std::stoi(data.substr(5)));
-        }
+        if (StringTools::startsWith(data, "tview_")) { action = "view"; subj.setId(std::stoi(data.substr(6))); isTeacher = true; }
+        else if (StringTools::startsWith(data, "view_")) { action = "view"; subj.setId(std::stoi(data.substr(5))); } 
+        else if (StringTools::startsWith(data, "join_")) { action = "join"; subj.setId(std::stoi(data.substr(5))); } 
+        else if (StringTools::startsWith(data, "leave_")) { action = "leave"; subj.setId(std::stoi(data.substr(6))); } 
+        else if (StringTools::startsWith(data, "skip_")){ action = "skip"; subj.setId(std::stoi(data.substr(5))); }
 
         Queue queue(subj.getId());
         subj.sync();
@@ -286,7 +298,8 @@ void setup_handlers(TgBot::Bot &bot) {
                             response += "\n";
                         }
                     }
-                } else {
+                } 
+                else {
                     response += "Ошибка получения списка.";
                 }
 
@@ -294,7 +307,8 @@ void setup_handlers(TgBot::Bot &bot) {
                 
                 try {
                     bot.getApi().editMessageText(response, chatId, query->message->messageId, "", "Markdown", nullptr, keyboard);
-                } catch (...) {}
+                } 
+                catch (...) {}
                 if (action != "view")
                     try { bot.getApi().answerCallbackQuery(query->id, alertText); }
                     catch(const std::exception& e) { std::cerr << e.what() << '\n'; }
@@ -339,7 +353,8 @@ void setup_handlers(TgBot::Bot &bot) {
                     auto sRes = studentByTGID(tgId);
                     if (sRes.first == FuncError::OK) displayStudentSubjects(bot, chatId, sRes.second.value());
                 }
-            } else {
+            } 
+            else {
                 if (isTeacherLogin)
                     askForLogin(bot, chatId, message->replyToMessage->messageId, true, "Некорректный логин преподавателя");
                 else 
@@ -360,13 +375,9 @@ void setup_handlers(TgBot::Bot &bot) {
 
 volatile std::sig_atomic_t gSignalStatus = 0;
 void signal_handler(int signal) { gSignalStatus = signal; }
-//TODO Раскидать группы отдельно
+
 int main() {
     const char* token = std::getenv("BOT_TOKEN");
-    if (!token) {
-        std::cerr << "ОШИБКА: переменная BOT_TOKEN не установлена!\n";
-        return 1;
-    }
 
     TgBot::Bot bot(token);
     auto& db = Database::getInstance("/data/bot.db");
@@ -390,11 +401,12 @@ int main() {
                 std::string error_msg = e.what();
                 
                 if (error_msg.find("Bad Request") != std::string::npos || 
+                    error_msg.find("Forbidden") != std::string::npos ||
                     error_msg.find("timed out") != std::string::npos) {
                     
-                    std::cerr << "Ошибка API (Timeout/Bad Request): " << error_msg << std::endl;
+                    std::cerr << "API Error: " << error_msg << std::endl;
                 } else {
-                    std::cerr << "Общая ошибка (std::exception): " << error_msg << std::endl;
+                    std::cerr << "System Error: " << error_msg << std::endl;
                 }
             } catch (...) {
                 std::cerr << "Неизвестная ошибка" << std::endl;
