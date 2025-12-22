@@ -43,6 +43,6 @@ public:
     FuncError addClass(const Seminar& seminar, int group);
     FuncError deleteClass(int sem_id);
 
-    FuncResult<int> addSubject(std::string groups);
+    FuncResult<int> addSubject(const std::string groups);
     FuncError deleteSubject();
 };

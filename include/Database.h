@@ -3,6 +3,14 @@
 #include <string>
 #include <memory>
 
+struct Sqlite3StmtDeleter {
+    void operator()(sqlite3_stmt* stmt) const {
+        sqlite3_finalize(stmt);
+    }
+};
+
+using StmtPtr = std::unique_ptr<sqlite3_stmt, Sqlite3StmtDeleter>;
+
 class Database {
 private:
     sqlite3* conn = nullptr;

@@ -5,7 +5,7 @@ void startMenu(TgBot::Bot& bot, int64_t chatId);
 
 FuncResult <Student> studentByTGID (const std::string& TG_id);
 FuncResult <Teacher> teacherByTGID (const std::string& TG_id);
-FuncError registrate(std::string login, std::string TG_Id, bool prepod=0);
+FuncError registrate(const std::string login, const std::string TG_Id, bool prepod=0);
 
 TgBot::InlineKeyboardButton::Ptr createBtn(const std::string& text, const std::string& callbackData);
 

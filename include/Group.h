@@ -15,8 +15,8 @@ public:
     FuncResult<std::vector<Student>> getStudents() const;
     FuncResult<std::vector<Subject>> getSubjects() const;
 
-    FuncError addToSubject(std::optional<std::string> name, std::optional<int> subject_id);
-    FuncError deleteFromSubject(std::optional<std::string> name, std::optional<int> subject_id);
+    FuncError addToSubject(std::optional<const std::string> name, std::optional<int> subject_id);
+    FuncError deleteFromSubject(std::optional<const std::string> name, std::optional<int> subject_id);
 
     // Leaderboard когда-нибудь когда нам будут платить деньги
 
