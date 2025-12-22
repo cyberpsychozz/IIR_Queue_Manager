@@ -431,11 +431,7 @@ void setup_handlers(TgBot::Bot &bot) {
                     
                     try { bot.getApi().deleteMessage(chatId, message->replyToMessage->messageId); } 
                     catch (...) {}
-                    
-                    auto tRes = teacherByTGID(tgId);
-                    if (tRes.first == FuncError::OK) {
-                        displayTeacherSubjects(bot, chatId, tRes.second.value());
-                    }}
+                }
                 
             }  
 
