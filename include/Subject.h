@@ -36,7 +36,7 @@ public:
 
     // Functions
     FuncError sync();
-    FuncError update();
+    FuncError updateComment();
     
     FuncResult<Teacher> getTeacher() const;
     FuncResult<std::vector<Seminar>> getClasses(int group) const;

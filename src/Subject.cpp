@@ -17,7 +17,7 @@ const std::string& Subject::getComment() const {return comment; }
 void Subject::setId(int newId) { id = newId; }
 void Subject::setTeacherId(int newTeacherId) { teacher_id = newTeacherId; }
 void Subject::setName(const std::string& newName) { name = newName; }
-void Subject::setComment(const std::string& newComment) { name = newComment; }
+void Subject::setComment(const std::string& newComment) { comment = newComment; }
 
 // Functions
 
@@ -48,6 +48,7 @@ FuncError Subject::sync() {
         const unsigned char* namebd = sqlite3_column_text(stmt, 1);
         name = std::string(reinterpret_cast<const char*>(namebd));
         teacher_id = sqlite3_column_int(stmt, 2);
+        comment = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4)));
     } 
     // Не вернулся результат    
     else if (rc == SQLITE_DONE) {
@@ -65,7 +66,7 @@ FuncError Subject::sync() {
     return FuncError::OK;
 }
 
-FuncError Subject::update(){
+FuncError Subject::updateComment(){
     auto &db = Database::getInstance();
 
     // Проверяем что соединение открыто
@@ -75,7 +76,7 @@ FuncError Subject::update(){
 
     const char* sql =  R"(
         UPDATE Subjects
-        SET (Comment) = (?)
+        SET Comment = ?
         WHERE Id = ?)";
 
     sqlite3_stmt* stmt = nullptr;
@@ -84,7 +85,10 @@ FuncError Subject::update(){
     sqlite3_bind_text(stmt, 1, comment.c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_int(stmt, 2, id);
 
-    rc = sqlite3_step(stmt);
+    if (sqlite3_step(stmt) != SQLITE_DONE) {
+        sqlite3_finalize(stmt);
+        return FuncError::STEP_FAILED;
+    }
 
     sqlite3_finalize(stmt);
 

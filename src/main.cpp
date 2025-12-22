@@ -107,7 +107,8 @@ void setup_handlers(TgBot::Bot &bot) {
         startMenu(bot, message->chat->id);
     });
 
-    bot.getEvents().onCallbackQuery([&bot](TgBot::CallbackQuery::Ptr query) {
+    bot.getEvents().onCallbackQuery([botPtr = std::make_shared<std::reference_wrapper<TgBot::Bot>>(bot)](TgBot::CallbackQuery::Ptr query) {
+        TgBot::Bot& bot = botPtr->get();
         std::string data = query->data;
         int64_t chatId = query->message->chat->id;
         int64_t userId = query->from->id; 
@@ -179,9 +180,10 @@ void setup_handlers(TgBot::Bot &bot) {
         bool isTeacher = false;
 
         if (StringTools::startsWith(data, "tview_")) {
-            action = "view"; 
+            action = "tview"; 
             subj.setId(std::stoi(data.substr(6)));
             isTeacher = true;
+            std::cout << "tview";
         }
         else if(StringTools::startsWith(data, "tcomment_")){
             action = "comment";
@@ -283,7 +285,8 @@ void setup_handlers(TgBot::Bot &bot) {
                 }
 
                 std::string response = "Очередь по предмету *" + subj.getName() + "*:\n\n";
-                std::string comment = "Комментарий преподавателя: *" + subj.getComment() + "*\n\n";
+                if(!subj.getComment().empty())
+                    response += "Комментарий преподавателя: *" + subj.getComment() + "*\n\n";
                 
                 if (isInQueue) {
                     response = " *Ваша позиция: " + std::to_string(studentPosition) + "*\n\n" + response;
@@ -321,9 +324,14 @@ void setup_handlers(TgBot::Bot &bot) {
     });
 
     // Автоудаление сообщений пользователя
-    bot.getEvents().onAnyMessage([&bot](TgBot::Message::Ptr message) {
+    bot.getEvents().onAnyMessage(
+        [botPtr = std::make_shared<std::reference_wrapper<TgBot::Bot>>(bot)]
+        (TgBot::Message::Ptr message) {
+        TgBot::Bot& bot = botPtr->get();
 
         bool handled = false;
+
+        std::cout<<"nigaa";
 
         // Проверяем, является ли сообщение ответом на запрос логина
         if (message->replyToMessage && message->replyToMessage->text.find("логин") != std::string::npos) {
@@ -341,7 +349,7 @@ void setup_handlers(TgBot::Bot &bot) {
             try { bot.getApi().deleteMessage(chatId, message->messageId); } catch (...) {}
 
             if (res == FuncError::OK) {
-                // Удаляем запрос бота
+                // Удаляем запрос ботаf
                 try { bot.getApi().deleteMessage(chatId, message->replyToMessage->messageId); } catch (...) {}
                 
                 // Показываем меню
@@ -360,31 +368,51 @@ void setup_handlers(TgBot::Bot &bot) {
                     askForLogin(bot, chatId, message->replyToMessage->messageId, false, "Некорректный логин студента");
             }
         }else if (message->replyToMessage && message->replyToMessage->text.find("комментарий") != std::string::npos){
+            
             handled = true;
             std::string tgId = std::to_string(message->from->id);
             int64_t chatId = message->chat->id;
             std::string comm = message->text;
             std::string subjName = message->replyToMessage->text.substr(33, message->replyToMessage->text.size() - 33 - 32);
+            
+            std::cout << "nigga";
 
-            auto res = teacherByTGID(tgId);
-            if(res.first == FuncError::OK){
-                auto subjects = res.second.value().getSubjects();
-                if (!subjects.first != FuncError::OK){
-                    std::cerr << subjects.first;
-                }
-                auto subjects = subjects.second.value();
-                auto it = std::find_if(
-                    subjects.begin(),
-                    subjects.end(),
-                    [&](const Subject& s) {
-                        return s.getName() == subjName;
-                    }
-                );
+            // auto res = teacherByTGID(tgId);
+            // if(res.first == FuncError::OK){
                 
-                it->setComment(comm);
-                it->update();   
+            //     auto subjects = res.second.value().getSubjects();
+            //     if (subjects.first != FuncError::OK){
+            //         std::cerr << subjects.first;
+            //     }
+
+            //     auto& subj = subjects.second.value();
                 
-            }  
+            //     auto it = std::find_if(
+            //         subj.begin(),
+            //         subj.end(),
+            //         [&](const Subject& s) {
+            //             return s.getName() == subjName;
+            //         }
+            //     );
+                
+            //     it->setComment(comm);
+            //     // it->updateComment();
+                
+            //     auto err = it->updateComment();
+        
+            //     if(err == FuncError::OK) {
+            //         try { bot.getApi().deleteMessage(chatId, message->messageId); } 
+            //         catch (...) {}
+                    
+            //         try { bot.getApi().deleteMessage(chatId, message->replyToMessage->messageId); } 
+            //         catch (...) {}
+                    
+            //         auto tRes = teacherByTGID(tgId);
+            //         if (tRes.first == FuncError::OK) {
+            //             displayTeacherSubjects(bot, chatId, tRes.second.value());
+            //         }}
+                
+            // }  
 
         }
 
@@ -410,22 +438,33 @@ int main() {
     }
 
     TgBot::Bot bot(token);
+    std::cout<<"1. Bot setup completed"<<std::endl;
+
     auto& db = Database::getInstance("/data/bot.db");
     if (!db.open()) return 1;
+    std::cout<<"2. db setup completed"<<std::endl;
     
     setup_handlers(bot);
+    std::cout<<"3. Handlers setup completed"<<std::endl;
 
     std::signal(SIGINT, signal_handler);
     std::signal(SIGTERM, signal_handler);
+
+    // Subject subj;
+    // subj.setId(1);
+    // subj.setComment("Артём лох ебаный");
+    // subj.updateComment();
 
     try {
         auto me = bot.getApi().getMe();
         std::cout << "Бот запущен: @" << me->username << "\n";
         fflush(stdout);
 
-        TgBot::TgLongPoll longPoll(bot, 1000, 0.1);
+        TgBot::TgLongPoll longPoll(bot, 1000, 0.3);
+        
         while (gSignalStatus == 0) {
             try {
+                
                 longPoll.start();
             } catch (const std::exception& e) {
                 std::string error_msg = e.what();
@@ -434,7 +473,10 @@ int main() {
                     error_msg.find("timed out") != std::string::npos) {
                     
                     std::cerr << "Ошибка API (Timeout/Bad Request): " << error_msg << std::endl;
-                } else {
+                } else  if (error_msg.find("bot was blocked by the user") != std::string::npos) {
+                    std::cerr << "Пользователь заблокировал бота, пропускаю: "
+                    << error_msg << std::endl;
+                } else{
                     std::cerr << "Общая ошибка (std::exception): " << error_msg << std::endl;
                 }
             } catch (...) {
@@ -444,6 +486,9 @@ int main() {
         std::cout << "\nОстановка бота...\n";
     } catch (const std::exception& e) {
         std::cerr << "Критическая ошибка при запуске: " << e.what() << std::endl;
+        return 1;
+    } catch (...) {
+        std::cerr << "Неизвестная критическая ошибка" << std::endl;
         return 1;
     }
     

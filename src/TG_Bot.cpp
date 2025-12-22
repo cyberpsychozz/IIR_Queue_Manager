@@ -178,8 +178,9 @@ TgBot::InlineKeyboardMarkup::Ptr createTeacherQueueControls(int subjectId) {
     row.push_back(createBtn("Обновить ⟳", "tview_" + sId)); 
     keyboard->inlineKeyboard.push_back(row);
 
-    row.push_back(createBtn("Добавить комментарий", "tcomment_" + sId));
-    keyboard->inlineKeyboard.push_back(row);
+    std::vector<TgBot::InlineKeyboardButton::Ptr> row2;
+    row2.push_back(createBtn("Добавить комментарий", "tcomment_" + sId));
+    keyboard->inlineKeyboard.push_back(row2);
 
     // 2 строка
     std::vector<TgBot::InlineKeyboardButton::Ptr> rowBack;
