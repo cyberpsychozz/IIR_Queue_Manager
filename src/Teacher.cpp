@@ -30,9 +30,8 @@ void Teacher::setUsernameTg(const std::string& newUsernameTg) { username_tg = ne
 FuncResult<std::vector<Subject>> Teacher::getSubjects() const {
     auto &db = Database::getInstance();
 
-    if (!db.get_conn()) {
+    if (!db.get_conn())
         return {FuncError::DB_NOT_OPEN, std::nullopt};
-    }
 
     const char* sql = R"(
         SELECT Id, Name
@@ -40,37 +39,32 @@ FuncResult<std::vector<Subject>> Teacher::getSubjects() const {
         WHERE Teacher_Id = ?;
     )";
 
-    sqlite3_stmt* stmt = nullptr;
-    auto rc = sqlite3_prepare_v2(db.get_conn(), sql, -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        sqlite3_finalize(stmt);
+    sqlite3_stmt* raw_stmt = nullptr;
+    auto rc = sqlite3_prepare_v2(db.get_conn(), sql, -1, &raw_stmt, nullptr);
+    StmtPtr stmt(raw_stmt);
+    if (rc != SQLITE_OK)
         return {FuncError::PREPARE_FAILED, std::nullopt};
-    }
 
-    sqlite3_bind_int(stmt, 1, id);
+    sqlite3_bind_int(stmt.get(), 1, id);
 
     std::vector<Subject> subjects;
     Subject subj;
     
-    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-        subj.setId(sqlite3_column_int(stmt, 0));
+    while ((rc = sqlite3_step(stmt.get())) == SQLITE_ROW) {
+        subj.setId(sqlite3_column_int(stmt.get(), 0));
         subj.setTeacherId(id);
 
-        const char* name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+        const char* name = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 1));
         subj.setName(std::string(reinterpret_cast<const char*>(name)));
         
         subjects.push_back(subj);
     }
 
-    if (rc != SQLITE_DONE) {
-        sqlite3_finalize(stmt);
+    if (rc != SQLITE_DONE)
         return {FuncError::STEP_FAILED, std::nullopt};
-    }
-    else if (subjects.empty()) {
-        sqlite3_finalize(stmt);
+    
+    else if (subjects.empty())
         return {FuncError::NOT_FOUND, std::nullopt};
-    }
 
-    sqlite3_finalize(stmt);
     return {FuncError::OK, subjects};
 }

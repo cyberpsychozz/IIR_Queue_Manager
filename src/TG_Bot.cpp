@@ -24,29 +24,29 @@ void startMenu(TgBot::Bot& bot, int64_t chatId) {
 FuncResult <Student> studentByTGID (const std::string& TG_id) {
     auto &db = Database::getInstance();
 
-    if (!db.get_conn()) {
+    if (!db.get_conn())
         return {FuncError::DB_NOT_OPEN, std::nullopt};
-    }
 
     const char* sql = R"(
         SELECT Id, Groups, Name, Login FROM Students
         WHERE TG_id = ?
     )";
 
-    sqlite3_stmt* stmt = nullptr;
-    auto rc = sqlite3_prepare_v2(db.get_conn(), sql, -1, &stmt, nullptr);
+    sqlite3_stmt* raw_stmt = nullptr;
+    auto rc = sqlite3_prepare_v2(db.get_conn(), sql, -1, &raw_stmt, nullptr);
+    StmtPtr stmt(raw_stmt);
 
-    sqlite3_bind_text(stmt, 1, TG_id.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt.get(), 1, TG_id.c_str(), -1, SQLITE_STATIC);
 
     Student student;
 
-    rc = sqlite3_step(stmt);
+    rc = sqlite3_step(stmt.get());
     
     if (rc == SQLITE_ROW) {
-        int studentId = sqlite3_column_int(stmt, 0);
-        int group = sqlite3_column_int(stmt, 1);
-        const unsigned char* name = sqlite3_column_text(stmt, 2);
-        const unsigned char* login = sqlite3_column_text(stmt, 3);
+        int studentId = sqlite3_column_int(stmt.get(), 0);
+        int group = sqlite3_column_int(stmt.get(), 1);
+        const unsigned char* name = sqlite3_column_text(stmt.get(), 2);
+        const unsigned char* login = sqlite3_column_text(stmt.get(), 3);
         
         student.setId(studentId);
         student.setGroupName(group);
@@ -55,17 +55,10 @@ FuncResult <Student> studentByTGID (const std::string& TG_id) {
         student.setUsernameTg(TG_id);
     } 
 
-    else if (rc == SQLITE_DONE) {
-        sqlite3_finalize(stmt);
+    else if (rc == SQLITE_DONE)
         return {FuncError::NOT_FOUND, std::nullopt};
-    }
 
-    else {
-        sqlite3_finalize(stmt);
-        return {FuncError::STEP_FAILED, std::nullopt};
-    }
-    
-    sqlite3_finalize(stmt);
+    else return {FuncError::STEP_FAILED, std::nullopt};
 
     return {FuncError::OK, student};
 }
@@ -75,28 +68,28 @@ FuncResult <Student> studentByTGID (const std::string& TG_id) {
 FuncResult <Teacher> teacherByTGID (const std::string& TG_id) {
     auto &db = Database::getInstance();
 
-    if (!db.get_conn()) {
+    if (!db.get_conn())
         return {FuncError::DB_NOT_OPEN, std::nullopt};
-    }
 
     const char* sql = R"(
         SELECT Id, Name, Login FROM Teachers
         WHERE TG_id = ?
     )";
 
-    sqlite3_stmt* stmt = nullptr;
-    auto rc = sqlite3_prepare_v2(db.get_conn(), sql, -1, &stmt, nullptr);
+    sqlite3_stmt* raw_stmt = nullptr;
+    auto rc = sqlite3_prepare_v2(db.get_conn(), sql, -1, &raw_stmt, nullptr);
+    StmtPtr stmt(raw_stmt);
 
-    sqlite3_bind_text(stmt, 1, TG_id.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt.get(), 1, TG_id.c_str(), -1, SQLITE_STATIC);
 
     Teacher teacher;
 
-    rc = sqlite3_step(stmt);
+    rc = sqlite3_step(stmt.get());
     
     if (rc == SQLITE_ROW) {
-        int teacherId = sqlite3_column_int(stmt, 0);
-        const unsigned char* name = sqlite3_column_text(stmt, 1);
-        const unsigned char* login = sqlite3_column_text(stmt, 2);
+        int teacherId = sqlite3_column_int(stmt.get(), 0);
+        const unsigned char* name = sqlite3_column_text(stmt.get(), 1);
+        const unsigned char* login = sqlite3_column_text(stmt.get(), 2);
         
         teacher.setId(teacherId);
         teacher.setName(std::string(reinterpret_cast<const char*>(name)));
@@ -104,17 +97,10 @@ FuncResult <Teacher> teacherByTGID (const std::string& TG_id) {
         teacher.setUsernameTg(TG_id);
     } 
 
-    else if (rc == SQLITE_DONE) {
-        sqlite3_finalize(stmt);
+    else if (rc == SQLITE_DONE)
         return {FuncError::NOT_FOUND, std::nullopt};
-    }
 
-    else {
-        sqlite3_finalize(stmt);
-        return {FuncError::STEP_FAILED, std::nullopt};
-    }
-    
-    sqlite3_finalize(stmt);
+    else return {FuncError::STEP_FAILED, std::nullopt};
 
     return {FuncError::OK, teacher};
 }
@@ -190,13 +176,12 @@ TgBot::InlineKeyboardMarkup::Ptr createTeacherQueueControls(int subjectId) {
 }
 
 // Регистрируем студента/преподавателя в БД по логину
-FuncError registrate(std::string login, std::string TG_Id, bool prepod) {
+FuncError registrate(const std::string login, const std::string TG_Id, bool prepod) {
     auto &db = Database::getInstance();
-    sqlite3_stmt* stmt = nullptr;
+    sqlite3_stmt* raw_stmt = nullptr;
 
-    if (!db.get_conn()) {
+    if (!db.get_conn())
         return FuncError::DB_NOT_OPEN;
-    }
 
     int Id;
     std::string sql_find;
@@ -220,45 +205,34 @@ FuncError registrate(std::string login, std::string TG_Id, bool prepod) {
     }
 
 
-    if (sqlite3_prepare_v2(db.get_conn(), sql_find.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+    if (sqlite3_prepare_v2(db.get_conn(), sql_find.c_str(), -1, &raw_stmt, nullptr) != SQLITE_OK)
         return FuncError::PREPARE_FAILED;
-    }
+    StmtPtr find_stmt(raw_stmt);
 
-    sqlite3_bind_text(stmt, 1, login.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(find_stmt.get(), 1, login.c_str(), -1, SQLITE_STATIC);
 
-    auto rc = sqlite3_step(stmt);
+    auto rc = sqlite3_step(find_stmt.get());
 
     // Вернулась строка
-    if (rc == SQLITE_ROW) {
-        Id = sqlite3_column_int(stmt, 0);
-        sqlite3_finalize(stmt);
-    } 
+    if (rc == SQLITE_ROW)
+        Id = sqlite3_column_int(find_stmt.get(), 0);
     // Не найден
-    else if (rc == SQLITE_DONE) {
-        sqlite3_finalize(stmt);
+    else if (rc == SQLITE_DONE)
         return FuncError::NOT_FOUND;
-    }
     // Вернулась ошибка 
-    else {
-        sqlite3_finalize(stmt);
-        return FuncError::STEP_FAILED;
-    }
+    else return FuncError::STEP_FAILED;
 
     // Обновление
-    if (sqlite3_prepare_v2(db.get_conn(), sql_update.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+    if (sqlite3_prepare_v2(db.get_conn(), sql_update.c_str(), -1, &raw_stmt, nullptr) != SQLITE_OK)
         return FuncError::PREPARE_FAILED;
-    }
+    StmtPtr upd_stmt(raw_stmt);
 
-    sqlite3_bind_int(stmt, 2, Id);
+    sqlite3_bind_int(upd_stmt.get(), 2, Id);
 
-    sqlite3_bind_text(stmt, 1, TG_Id.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(upd_stmt.get(), 1, TG_Id.c_str(), -1, SQLITE_STATIC);
 
-    if (sqlite3_step(stmt) != SQLITE_DONE) {
-        sqlite3_finalize(stmt);
+    if (sqlite3_step(upd_stmt.get()) != SQLITE_DONE)
         return FuncError::STEP_FAILED;
-    }
-
-    sqlite3_finalize(stmt);
 
     return FuncError::OK;
 }

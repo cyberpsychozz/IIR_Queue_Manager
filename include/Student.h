@@ -36,7 +36,7 @@ public:
     
     FuncResult<std::vector<Subject>> getSubjects() const;
 
-    FuncError addStudent(std::optional<std::string> name);
-    FuncError deleteStudent(std::optional<std::string> name, std::optional<int> student_id);
+    FuncError addStudent(std::optional<const std::string> name);
+    FuncError deleteStudent(std::optional<const std::string> name, std::optional<int> student_id);
 
 };

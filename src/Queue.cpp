@@ -16,84 +16,73 @@ inline bool is_connection_open(sqlite3* conn) {
 FuncResult<int>Queue::push(int student_id){
     auto& db = Database::getInstance();
 
-    if (!db.get_conn()){
+    if (!db.get_conn())
         return {FuncError::DB_NOT_OPEN, std::nullopt};
-    }
     
     auto LenRes = getLen();
-    if (LenRes != FuncError::OK){
+    if (LenRes != FuncError::OK)
         return {LenRes.first, std::nullopt};
-    }
 
     int new_pos = LenRes.second.value() + 1;
 
     const char* sql = "INSERT INTO Queues (Id, Student_Id, Subject_Id, Position) VALUES ((SELECT max(Id) from Queues) + 1, ?, ?, ?);"; 
 
-    sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(db.get_conn(), sql, -1, &stmt, nullptr) != SQLITE_OK) {
+    sqlite3_stmt* raw_stmt = nullptr;
+    if (sqlite3_prepare_v2(db.get_conn(), sql, -1, &raw_stmt, nullptr) != SQLITE_OK)
         return {FuncError::PREPARE_FAILED, std::nullopt};
-    }
+    
+    StmtPtr stmt(raw_stmt);
 
-    sqlite3_bind_int(stmt, 1, student_id);
-    sqlite3_bind_int(stmt, 2, _Subject_id);
-    sqlite3_bind_int(stmt, 3, new_pos);
+    sqlite3_bind_int(stmt.get(), 1, student_id);
+    sqlite3_bind_int(stmt.get(), 2, _Subject_id);
+    sqlite3_bind_int(stmt.get(), 3, new_pos);
 
-    int rc = sqlite3_step(stmt);
-    sqlite3_finalize(stmt);
+    int rc = sqlite3_step(stmt.get());
 
-    if(rc != SQLITE_DONE){
+    if(rc != SQLITE_DONE)
         return{FuncError::STEP_FAILED, std::nullopt};
-    }
     
     return{FuncError::OK, new_pos};
-    
 }
 
 // Удаление человека из очереди
 FuncError Queue::pop(){
     auto& db = Database::getInstance();
 
-    if (!db.get_conn()){
+    if (!db.get_conn())
         return FuncError::DB_NOT_OPEN;
-    }
     
     const char* sql_del = "DELETE FROM Queues WHERE Subject_Id = ? AND Position = 1;";
     const char* sql_shift1 = "UPDATE Queues SET Id = Id - 1;";
     const char* sql_shift2 = "UPDATE Queues SET Position = Position - 1 WHERE Subject_Id = ?;";
 
 
-    sqlite3_stmt* stmt;
+    sqlite3_stmt* raw_stmt;
     // Удаление студента
-    if (sqlite3_prepare_v2(db.get_conn(), sql_del, -1, &stmt, nullptr) != SQLITE_OK) {
+    if (sqlite3_prepare_v2(db.get_conn(), sql_del, -1, &raw_stmt, nullptr) != SQLITE_OK) 
         return FuncError::PREPARE_FAILED;
-    }
-    sqlite3_bind_int(stmt, 1, _Subject_id);
-    if (sqlite3_step(stmt) != SQLITE_DONE){
-        // не выполнился step
-        sqlite3_finalize(stmt);
-        return FuncError::STEP_FAILED;
-    }
-    sqlite3_finalize(stmt);
-    // Обновление очереди
-    
-    if (sqlite3_prepare_v2(db.get_conn(), sql_shift2, -1, &stmt, nullptr) != SQLITE_OK) {
-        return FuncError::PREPARE_FAILED;
-    }
-    sqlite3_bind_int(stmt, 1, _Subject_id);
-    if (sqlite3_step(stmt) != SQLITE_DONE){
-        // не выполнился step
-        sqlite3_finalize(stmt);
-        return FuncError::STEP_FAILED;
-    }
-    sqlite3_finalize(stmt);
-    
+    StmtPtr stmt(raw_stmt);
 
-    if (sqlite3_prepare_v2(db.get_conn(), sql_shift1, -1, &stmt, nullptr) != SQLITE_OK) {
-        return FuncError::PREPARE_FAILED;
-    }
+    sqlite3_bind_int(stmt.get(), 1, _Subject_id);
+    // не выполнился step
+    if (sqlite3_step(stmt.get()) != SQLITE_DONE)
+        return FuncError::STEP_FAILED;
         
-    int rc = sqlite3_step(stmt);
-    sqlite3_finalize(stmt);
+    // Обновление очереди
+    if (sqlite3_prepare_v2(db.get_conn(), sql_shift2, -1, &raw_stmt, nullptr) != SQLITE_OK)
+        return FuncError::PREPARE_FAILED;
+    StmtPtr stmt2(raw_stmt);
+
+    sqlite3_bind_int(stmt2.get(), 1, _Subject_id);
+    // не выполнился step
+    if (sqlite3_step(stmt2.get()) != SQLITE_DONE)
+        return FuncError::STEP_FAILED;
+
+    if (sqlite3_prepare_v2(db.get_conn(), sql_shift1, -1, &raw_stmt, nullptr) != SQLITE_OK)
+        return FuncError::PREPARE_FAILED;
+        
+    int rc = sqlite3_step(raw_stmt);
+    sqlite3_finalize(raw_stmt);
     
     return FuncError::OK;
 }
@@ -102,12 +91,11 @@ FuncError Queue::pop(){
 FuncError Queue::swap(int pos1, int pos2) {
     auto& db = Database::getInstance();
 
-    if (!db.get_conn()) {
+    if (!db.get_conn())
         return FuncError::DB_NOT_OPEN;
-    }
-    if (pos1 <= 0 || pos2 <= 0 || pos1 == pos2) {
+
+    if (pos1 <= 0 || pos2 <= 0 || pos1 == pos2)
         return FuncError::INVALID_POSITION;
-    }
 
     const char* sql = R"(
         UPDATE Queues SET Position = CASE
@@ -117,35 +105,34 @@ FuncError Queue::swap(int pos1, int pos2) {
         WHERE Subject_Id = ? AND Position IN (?, ?);
     )";
 
-    sqlite3_stmt* stmt = nullptr;
-    if (sqlite3_prepare_v2(db.get_conn(), sql, -1, &stmt, nullptr) != SQLITE_OK) {
+    sqlite3_stmt* raw_stmt = nullptr;
+    if (sqlite3_prepare_v2(db.get_conn(), sql, -1, &raw_stmt, nullptr) != SQLITE_OK)
         return FuncError::PREPARE_FAILED;
-    }
+    StmtPtr stmt(raw_stmt);
 
-    sqlite3_bind_int(stmt, 1, pos1); sqlite3_bind_int(stmt, 2, pos2);
-    sqlite3_bind_int(stmt, 3, pos2); sqlite3_bind_int(stmt, 4, pos1);
-    sqlite3_bind_int(stmt, 5, _Subject_id);
-    sqlite3_bind_int(stmt, 6, pos1); sqlite3_bind_int(stmt, 7, pos2);
+    sqlite3_bind_int(stmt.get(), 1, pos1); sqlite3_bind_int(stmt.get(), 2, pos2);
+    sqlite3_bind_int(stmt.get(), 3, pos2); sqlite3_bind_int(stmt.get(), 4, pos1);
+    sqlite3_bind_int(stmt.get(), 5, _Subject_id);
+    sqlite3_bind_int(stmt.get(), 6, pos1); sqlite3_bind_int(stmt.get(), 7, pos2);
 
-    int rc = sqlite3_step(stmt);
+    int rc = sqlite3_step(stmt.get());
     int changes = sqlite3_changes(db.get_conn());
-    sqlite3_finalize(stmt);
 
-    if (rc != SQLITE_DONE) {
+    if (rc != SQLITE_DONE)
         return FuncError::STEP_FAILED;
-    }
-    if (changes != 2) {
+    if (changes != 2)
         return FuncError::NOT_FOUND;
-    }
 
     return FuncError::OK;
 }
 
 // Пропуск одного человека вперёд
-FuncError Queue::skip(int student_id){
+FuncError Queue::skip(int student_id) {
     auto pos_res = getPosition(student_id);
+
     if (pos_res.first != FuncError::OK || !pos_res.second.has_value())
         return FuncError::NOT_FOUND;
+    
     else if (pos_res.second.value() == getLen().second)
         return FuncError::INVALID_POSITION;
 
@@ -157,9 +144,8 @@ FuncError Queue::skip(int student_id){
 FuncError Queue::give_up(int student_id){
     auto& db = Database::getInstance();
 
-    if (!db.get_conn()){
+    if (!db.get_conn())
         return FuncError::DB_NOT_OPEN;
-    }
     
     auto pos_res = getPosition(student_id);
     if (pos_res.first != FuncError::OK || !pos_res.second.has_value())
@@ -170,29 +156,27 @@ FuncError Queue::give_up(int student_id){
     const char* sql_del = "DELETE FROM Queues WHERE Subject_Id = ? AND Student_Id = ?;";
     const char* sql_shift = "UPDATE Queues SET Position = Position - 1 WHERE Subject_Id = ? And Position > ?;";
 
-    sqlite3_stmt* stmt;
+    sqlite3_stmt* raw_stmt;
 
     // Удаление студента
-    if (sqlite3_prepare_v2(db.get_conn(), sql_del, -1, &stmt, nullptr) != SQLITE_OK) {
+    if (sqlite3_prepare_v2(db.get_conn(), sql_del, -1, &raw_stmt, nullptr) != SQLITE_OK)
         return FuncError::PREPARE_FAILED;
-    }
-    sqlite3_bind_int(stmt, 1, _Subject_id);
-    sqlite3_bind_int(stmt, 2, student_id);
-    if (sqlite3_step(stmt) != SQLITE_DONE){
-        // не выполнился step
-        sqlite3_finalize(stmt);
+    StmtPtr stmt(raw_stmt);
+
+    sqlite3_bind_int(stmt.get(), 1, _Subject_id);
+    sqlite3_bind_int(stmt.get(), 2, student_id);
+    // не выполнился step
+    if (sqlite3_step(stmt.get()) != SQLITE_DONE)
         return FuncError::STEP_FAILED;
-    }
-    sqlite3_finalize(stmt);
 
     // Обновление очереди
-    if (sqlite3_prepare_v2(db.get_conn(), sql_shift, -1, &stmt, nullptr) != SQLITE_OK) {
+    if (sqlite3_prepare_v2(db.get_conn(), sql_shift, -1, &raw_stmt, nullptr) != SQLITE_OK)
         return FuncError::PREPARE_FAILED;
-    }
-    sqlite3_bind_int(stmt, 1, _Subject_id);
-    sqlite3_bind_int(stmt, 2, pos);
-    int rc = sqlite3_step(stmt);
-    sqlite3_finalize(stmt);
+    StmtPtr stmt2(raw_stmt);
+
+    sqlite3_bind_int(stmt2.get(), 1, _Subject_id);
+    sqlite3_bind_int(stmt2.get(), 2, pos);
+    int rc = sqlite3_step(stmt2.get());
     
     return FuncError::OK;
 }
@@ -200,23 +184,22 @@ FuncError Queue::give_up(int student_id){
 // Своя позиция в очереди
 FuncResult<int> Queue::getPosition(int student_id) const {
     auto& db = Database::getInstance();
-   if (!db.get_conn()){
+   if (!db.get_conn())
         return{FuncError::DB_NOT_OPEN, std::nullopt};
-    }
+    
     const char* sql = "SELECT Position FROM Queues WHERE Subject_Id = ? AND Student_Id = ?;";
-    sqlite3_stmt* stmt;
+    sqlite3_stmt* raw_stmt;
 
-    if (sqlite3_prepare_v2(db.get_conn(), sql, -1, &stmt, nullptr) != SQLITE_OK)
+    if (sqlite3_prepare_v2(db.get_conn(), sql, -1, &raw_stmt, nullptr) != SQLITE_OK)
         return {FuncError::PREPARE_FAILED, std::nullopt};
+    StmtPtr stmt(raw_stmt);
 
-    sqlite3_bind_int(stmt, 1, _Subject_id);
-    sqlite3_bind_int(stmt, 2, student_id);
+    sqlite3_bind_int(stmt.get(), 1, _Subject_id);
+    sqlite3_bind_int(stmt.get(), 2, student_id);
 
     int pos = -1;
-    if (sqlite3_step(stmt) == SQLITE_ROW) {
-        pos = sqlite3_column_int(stmt, 0);
-    }
-    sqlite3_finalize(stmt);
+    if (sqlite3_step(stmt.get()) == SQLITE_ROW) 
+        pos = sqlite3_column_int(stmt.get(), 0);
 
     return pos >= 1 ? FuncResult<int>{FuncError::OK, pos}
                     : FuncResult<int>{FuncError::NOT_FOUND, std::nullopt};
@@ -225,25 +208,24 @@ FuncResult<int> Queue::getPosition(int student_id) const {
 // Возвращает текущую длину очереди
 FuncResult<int> Queue::getLen() const {
     auto& db = Database::getInstance();
-    if (!db.get_conn()){
+    if (!db.get_conn())
         return{FuncError::DB_NOT_OPEN, std::nullopt};
-    }
+    
     const char* sql = "SELECT COUNT(*) FROM Queues WHERE Subject_Id = ?;";
-    sqlite3_stmt* stmt;
+    sqlite3_stmt* raw_stmt;
 
-    if (sqlite3_prepare_v2(db.get_conn(), sql, -1, &stmt, nullptr) != SQLITE_OK)
+    if (sqlite3_prepare_v2(db.get_conn(), sql, -1, &raw_stmt, nullptr) != SQLITE_OK)
         return {FuncError::PREPARE_FAILED, std::nullopt};
+    StmtPtr stmt(raw_stmt);
 
-    sqlite3_bind_int(stmt, 1, _Subject_id);
+    sqlite3_bind_int(stmt.get(), 1, _Subject_id);
 
     int len = 0;
-    if (sqlite3_step(stmt) == SQLITE_ROW) {
-        len = sqlite3_column_int(stmt, 0);
-    }
-    sqlite3_finalize(stmt);
+    if (sqlite3_step(stmt.get()) == SQLITE_ROW)
+        len = sqlite3_column_int(stmt.get(), 0);
 
     return {FuncError::OK, len};
-} // Длина очереди
+}
 
 
 // Возвращает полный список студентов, состоящих в очереди
@@ -252,9 +234,8 @@ FuncResult<std::vector<Student>>Queue::getQueue() const{
     std::vector<Student> students;
 
     // Проверяем, что соединение открыто
-    if (!db.get_conn()) {
+    if (!db.get_conn()) 
         return {FuncError::DB_NOT_OPEN, std::nullopt};
-    }
 
     // Подготавливаем SQL-запрос
     const char* sql = R"(
@@ -265,30 +246,29 @@ FuncResult<std::vector<Student>>Queue::getQueue() const{
         ORDER BY Position ASC
     )";
 
-    sqlite3_stmt* stmt = nullptr;
-    auto rc = sqlite3_prepare_v2(db.get_conn(), sql, -1, &stmt, nullptr);
+    sqlite3_stmt* raw_stmt = nullptr;
+    auto rc = sqlite3_prepare_v2(db.get_conn(), sql, -1, &raw_stmt, nullptr);
+    StmtPtr stmt(raw_stmt);
     if (rc != SQLITE_OK) {
         std::string err = "SQL prepare error: ";
         err += sqlite3_errmsg(db.get_conn());
-        sqlite3_finalize(stmt);
         return {FuncError::PREPARE_FAILED, std::nullopt};
     }
 
-    if (sqlite3_bind_int(stmt, 1, _Subject_id) != SQLITE_OK) {
-        sqlite3_finalize(stmt);
+    if (sqlite3_bind_int(stmt.get(), 1, _Subject_id) != SQLITE_OK)
         return {FuncError::BIND_FAILED, std::nullopt};
-    }
+    
     // Привязываем subject_id
-    sqlite3_bind_int(stmt, 1, _Subject_id);
+    sqlite3_bind_int(stmt.get(), 1, _Subject_id);
     Student student;
     // Выполняем шаг за шагом
-    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+    while ((rc = sqlite3_step(stmt.get())) == SQLITE_ROW) {
         
-        student.setId(sqlite3_column_int(stmt, 1));
+        student.setId(sqlite3_column_int(stmt.get(), 1));
 
-        student.setGroupName((sqlite3_column_int(stmt, 3)));
+        student.setGroupName((sqlite3_column_int(stmt.get(), 3)));
 
-        student.setName(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2)));
+        student.setName(reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 2)));
 
         students.push_back(student);
     }
@@ -296,10 +276,8 @@ FuncResult<std::vector<Student>>Queue::getQueue() const{
     if (rc != SQLITE_DONE) {
         std::string err = "SQL step error: ";
         err += sqlite3_errmsg(db.get_conn());
-        sqlite3_finalize(stmt);
         return {FuncError::STEP_FAILED, std::nullopt};
     }
 
-    sqlite3_finalize(stmt);
     return {FuncError::OK, students};
 }
