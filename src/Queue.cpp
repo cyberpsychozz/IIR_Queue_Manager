@@ -153,30 +153,36 @@ FuncError Queue::give_up(int student_id){
 
     int pos = pos_res.second.value();
 
-    const char* sql_del = "DELETE FROM Queues WHERE Subject_Id = ? AND Student_Id = ?;";
-    const char* sql_shift = "UPDATE Queues SET Position = Position - 1 WHERE Subject_Id = ? And Position > ?;";
+    {
+        const char* sql_del = "DELETE FROM Queues WHERE Subject_Id = ? AND Student_Id = ?;";
+        sqlite3_stmt* raw_del;
 
-    sqlite3_stmt* raw_stmt;
+        // Удаление студента
+        if (sqlite3_prepare_v2(db.get_conn(), sql_del, -1, &raw_del, nullptr) != SQLITE_OK)
+            return FuncError::PREPARE_FAILED;
+        StmtPtr stmt(raw_del);
 
-    // Удаление студента
-    if (sqlite3_prepare_v2(db.get_conn(), sql_del, -1, &raw_stmt, nullptr) != SQLITE_OK)
-        return FuncError::PREPARE_FAILED;
-    StmtPtr stmt(raw_stmt);
+        sqlite3_bind_int(stmt.get(), 1, _Subject_id);
+        sqlite3_bind_int(stmt.get(), 2, student_id);
+        // не выполнился step
+        if (sqlite3_step(stmt.get()) != SQLITE_DONE)
+            return FuncError::STEP_FAILED;
+    }
 
-    sqlite3_bind_int(stmt.get(), 1, _Subject_id);
-    sqlite3_bind_int(stmt.get(), 2, student_id);
-    // не выполнился step
-    if (sqlite3_step(stmt.get()) != SQLITE_DONE)
-        return FuncError::STEP_FAILED;
+    {
+        const char* sql_shift = "UPDATE Queues SET Position = Position - 1 WHERE Subject_Id = ? And Position > ?;";
+         sqlite3_stmt* raw_shift;
+        // Обновление очереди
+        if (sqlite3_prepare_v2(db.get_conn(), sql_shift, -1, &raw_shift, nullptr) != SQLITE_OK)
+            return FuncError::PREPARE_FAILED;
+        StmtPtr stmt(raw_shift);
 
-    // Обновление очереди
-    if (sqlite3_prepare_v2(db.get_conn(), sql_shift, -1, &raw_stmt, nullptr) != SQLITE_OK)
-        return FuncError::PREPARE_FAILED;
-    StmtPtr stmt2(raw_stmt);
-
-    sqlite3_bind_int(stmt2.get(), 1, _Subject_id);
-    sqlite3_bind_int(stmt2.get(), 2, pos);
-    int rc = sqlite3_step(stmt2.get());
+        sqlite3_bind_int(stmt.get(), 1, _Subject_id);
+        sqlite3_bind_int(stmt.get(), 2, pos);
+        int rc = sqlite3_step(stmt.get());
+        if (rc != SQLITE_DONE)
+            return FuncError::STEP_FAILED;
+    }
     
     return FuncError::OK;
 }

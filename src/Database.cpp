@@ -30,6 +30,8 @@ bool Database::open() {
         conn = nullptr;
         return false;
     }
+    sqlite3_exec(conn, "PRAGMA journal_mode=WAL;", nullptr, nullptr, nullptr);
+    sqlite3_exec(conn, "PRAGMA synchronous=NORMAL;", nullptr, nullptr, nullptr);
     return true;
 }
 

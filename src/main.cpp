@@ -294,12 +294,14 @@ void setup_handlers(TgBot::Bot &bot) {
                 else if (action == "leave") {
                     auto res = queue.give_up(dbStudentId);
                     if (res == FuncError::OK) alertText = "Вы покинули очередь.";
-                    else alertText = "Ошибка выхода.";
+                    else 
+                        alertText = "Ошибка выхода.";
                 }
                 else if (action == "skip") {
                     auto res = queue.skip(dbStudentId);
                     if (res == FuncError::OK) alertText = "Вы сдвинулись 1 позицию назад.";
-                    else alertText = "Ошибка сдвига.";
+                    else 
+                        alertText = "Ошибка сдвига.";
                 }
 
                 auto qRes = queue.getQueue();
@@ -333,9 +335,8 @@ void setup_handlers(TgBot::Bot &bot) {
                         }
                     }
                 } 
-                else {
+                else 
                     response += "Ошибка получения списка.";
-                }
 
                 auto keyboard = createQueueControls(subj.getId(), isInQueue);
                 
@@ -477,8 +478,7 @@ int main() {
         std::cout << "Бот запущен: @" << me->username << "\n";
         fflush(stdout);
 
-        TgBot::TgLongPoll longPoll(bot, 1000, 0.3);
-        
+        TgBot::TgLongPoll longPoll(bot);
         while (gSignalStatus == 0) {
             try {
                 
